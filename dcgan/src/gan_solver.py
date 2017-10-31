@@ -18,7 +18,7 @@ class GanSolver(object):
         self.g_conv_dim = 128
         self.d_conv_dim = 128
         self.noise_dim = 100
-        self.beta1 = 0.5
+        self.beta1 = 0.9
         self.beta2 = 0.999
         self.learning_rate = 0.0001
         self.image_size = config.image_size
