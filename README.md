@@ -1,7 +1,8 @@
 ## Research project: Utility-preserving data privatization
 
-<img src="http://forthebadge.com/images/badges/made-with-python.svg" />
+<a href="https://circleci.com/gh/WUT-ML/privacy"><img src="https://circleci.com/gh/WUT-ML/privacy.svg?style=svg" align="right"></a>
 
+<img src="http://forthebadge.com/images/badges/made-with-python.svg" />
 
 > ###### [Overview](#overview) | [Requirements](#requirements) | [Steps](#steps) 
 
