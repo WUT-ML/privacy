@@ -1,13 +1,13 @@
-<img src="http://forthebadge.com/images/badges/made-with-python.svg" align="right" />
-
 ## Research project: Utility-preserving data privatization
 
-## Overview
+### Overview
 
 TBD
 
 
-## Requirements
+### Requirements
+
+<img src="http://forthebadge.com/images/badges/made-with-python.svg" align="right" />
 
 - Python 3.5
 - PyTorch 0.3
@@ -15,7 +15,7 @@ TBD
 - luigi
 
 
-## Steps
+### Steps
 
 ###### 0. Setup
 
@@ -26,7 +26,7 @@ pip install -r requirements.txt
 ###### 1. Dataset preparation
 
 ```bash
-python ./run.py Dataset  --local-scheduler
+python ./run.py Dataset --local-scheduler
 ```
 
 Download & extract the [NIST FIGS database](https://www.nist.gov/srd/nist-special-database-4) to `data/` folder.
