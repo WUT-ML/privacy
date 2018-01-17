@@ -42,11 +42,11 @@ class CleanableTask(luigi.Task):
     """A task with cleaning functionality."""
 
     def clean(self):
+        """Purge output file."""
         self.output().remove()
 
 
 class DownloadDataset(CleanableTask):
-
     """Download the NIST FIGS dataset."""
 
     def output(self):
@@ -64,10 +64,10 @@ class DownloadDataset(CleanableTask):
 
 
 class ExtractDataset(CleanableTask):
-
     """Extract the NIST FIGS dataset."""
 
     def requires(self):
+        """Ensure dataset is downloaded."""
         return DownloadDataset()
 
     def output(self):
@@ -93,13 +93,14 @@ class ExtractDataset(CleanableTask):
 
 
 class Dataset(CleanableTask):
-
     """Prepare the NIST FIGS dataset."""
 
     def requires(self):
+        """Ensure dataset has been extracted."""
         return ExtractDataset()
 
     def output(self):
+        """Dataset directory."""
         return self.input()
 
 
