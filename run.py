@@ -13,8 +13,8 @@ import zipfile
 import luigi
 
 
-NIST_FIGS_URL = 'https://s3.amazonaws.com/nist-srd/SD4/NISTSpecialDatabase4GrayScaleImagesofFIGS.zip'
-NIST_FIGS_SHA = '4db6a8f3f9dc14c504180cbf67cdf35167a109280f121c901be37a80ac13c449'
+NIST_URL = 'https://s3.amazonaws.com/nist-srd/SD4/NISTSpecialDatabase4GrayScaleImagesofFIGS.zip'
+NIST_SHA = '4db6a8f3f9dc14c504180cbf67cdf35167a109280f121c901be37a80ac13c449'
 
 
 def get_hash(path):
@@ -27,7 +27,7 @@ def get_hash(path):
             buffer = file.read(BLOCKSIZE)
             while len(buffer) > 0:
                 sha.update(buffer)
-                buffer  = file.read(BLOCKSIZE)
+                buffer = file.read(BLOCKSIZE)
     except:
         return None
 
@@ -56,9 +56,9 @@ class DownloadDataset(CleanableTask):
     def run(self):
         """Download dataset ZIP archive."""
         with self.output().temporary_path() as tmp_path:
-            urllib.request.urlretrieve(NIST_FIGS_URL, tmp_path)
+            urllib.request.urlretrieve(NIST_URL, tmp_path)
 
-            if get_hash(tmp_path) != NIST_FIGS_SHA:
+            if get_hash(tmp_path) != NIST_SHA:
                 os.remove(tmp_path)
                 raise PipelineException('Dataset checksum verification failed.')
 
