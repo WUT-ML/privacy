@@ -1,6 +1,6 @@
 ## Research project: Utility-preserving data privatization
 
-<a href="https://circleci.com/gh/WUT-ML/privacy"><img src="https://circleci.com/gh/WUT-ML/privacy.svg?style=svg" align="right"></a>
+<a href="https://circleci.com/gh/WUT-ML/privacy"><img src="https://circleci.com/gh/WUT-ML/privacy.svg?style=svg&circle-token=50a67db445aab324ef969f27d5fd365ff9b20b7d" align="right"></a>
 
 <img src="http://forthebadge.com/images/badges/made-with-python.svg" />
 
