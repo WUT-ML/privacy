@@ -155,3 +155,6 @@ fabric.properties
 
 # Raw data
 /data/
+
+# All PyCharm settings
+.idea/
