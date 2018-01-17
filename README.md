@@ -1,21 +1,24 @@
 ## Research project: Utility-preserving data privatization
 
-### Overview
+<img src="http://forthebadge.com/images/badges/made-with-python.svg" />
+
+
+> ###### [Overview](#overview) | [Requirements](#requirements) | [Steps](#steps) 
+
+
+## Overview
 
 TBD
 
 
-### Requirements
+## Requirements
 
-<img src="http://forthebadge.com/images/badges/made-with-python.svg" align="right" />
-
-- Python 3.5
-- PyTorch 0.3
-- torchvision
-- luigi
+###### • Python 3.5
+###### • PyTorch 0.3 & torchvision
+###### • luigi
 
 
-### Steps
+## Steps
 
 ###### 0. Setup
 
