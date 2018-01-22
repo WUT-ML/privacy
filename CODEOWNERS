@@ -1,2 +1,4 @@
 /src/dcgan/ @witold-oleszkiewicz
+/src/cdcgan/ @witold-oleszkiewicz
+/src/generative_siamese/ @witold-oleszkiewicz
 run.py @karoldvl
