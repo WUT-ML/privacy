@@ -1,10 +1,13 @@
 """Deep convolutional GAN with siamese discriminator."""
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import os
 from torch.autograd import Variable
 import torchvision
+from tqdm import tqdm
+
 from generator_plus_siamese_model import Generator, SiameseDiscriminator, ContrastiveLoss
 
 
@@ -53,9 +56,16 @@ class SiameseGanSolver(object):
 
     def train(self):
         """Train generator and discriminator."""
+
         # First train discriminator on real images
+        tqdm.write('Phase 1 (train discriminator to classify image pairs as same/different ID)')
+        epoch_monitor = tqdm(total=self.num_epochs)
+        epoch_monitor.set_description('Epoch')
+
         for epoch in range(self.num_epochs):
-            break
+            batch_monitor = tqdm(total=len(self.data_loader))
+            batch_monitor.set_description('Batch')
+
             for label, images0, images1 in self.data_loader:
                 images0 = to_variable(images0)
                 images1 = to_variable(images1)
@@ -64,6 +74,7 @@ class SiameseGanSolver(object):
                 # Train discriminator to recognize identity of real images
                 output1, output2 = self.discriminator(images0, images1)
                 d_real_loss = self.contrastive_loss(output1, output2, label)
+                batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0])
 
                 # Backpropagation
                 self.contrastive_loss.zero_grad()
@@ -71,12 +82,24 @@ class SiameseGanSolver(object):
                 d_real_loss.backward()
                 self.d_optimizer.step()
 
+                batch_monitor.update()
+
+            batch_monitor.close()
+            epoch_monitor.update()
+
+        epoch_monitor.close()
+
         # After discriminator is trained on real images,
         # train discriminator on fake images and train generator to fool discriminator
-        for epoch in range(self.num_epochs):
-            for label, images0, images1 in self.data_loader:
-                print(epoch)
+        tqdm.write('Phase 2 (train discriminator/generator in a minimax game)')
+        epoch_monitor = tqdm(total=self.num_epochs)
+        epoch_monitor.set_description('Epoch')
 
+        for epoch in range(self.num_epochs):
+            batch_monitor = tqdm(total=len(self.data_loader))
+            batch_monitor.set_description('Batch')
+
+            for label, images0, images1 in self.data_loader:
                 batch_size = images0.size(0)
                 noise = to_variable(torch.randn(batch_size, self.noise_dim))
 
@@ -102,6 +125,7 @@ class SiameseGanSolver(object):
                 output1, output2 = self.discriminator(images1, fake_images)
                 g_loss = self.contrastive_loss(output1, output2, 0, self.max_L2, images0,
                                                fake_images)
+                batch_monitor.set_postfix(d_fake_loss=d_fake_loss.data[0], g_loss=g_loss.data[0])
 
                 # Backpropagation
                 self.contrastive_loss.zero_grad()
@@ -109,6 +133,13 @@ class SiameseGanSolver(object):
                 self.generator.zero_grad()
                 g_loss.backward()
                 self.g_optimizer.step()
+
+                batch_monitor.update()
+
+            batch_monitor.close()
+            epoch_monitor.update()
+
+        epoch_monitor.close()
 
         # Save generator to file
         g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
