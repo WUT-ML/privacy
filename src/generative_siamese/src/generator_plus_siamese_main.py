@@ -14,11 +14,14 @@ def main():
     cudnn.benchmark = True
 
     # Load and trasnform dataset
-    dataset = TrFingerprints(transform=transforms.Compose([
-                                                        transforms.ToPILImage(),
-                                                        transforms.Resize(size=config.image_size),
-                                                        transforms.RandomHorizontalFlip(),
-                                                        transforms.ToTensor()]))
+    dataset_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize(size=config.image_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+    ])
+
+    dataset = TrFingerprints(transform=dataset_transform, path=config.image_path)
 
     # Create directories if not exist
     if not os.path.exists(config.model_path):
