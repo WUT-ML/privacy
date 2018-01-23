@@ -56,7 +56,6 @@ class SiameseGanSolver(object):
 
     def train(self):
         """Train generator and discriminator."""
-
         # First train discriminator on real images
         tqdm.write('Phase 1 (train discriminator to classify image pairs as same/different ID)')
         epoch_monitor = tqdm(total=self.num_epochs)
