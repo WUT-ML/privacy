@@ -65,6 +65,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_L2', type=int, default=5000)
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--batch', type=int, default=64)
+    parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
+    parser.set_defaults(tensorboard=False)
 
     config = parser.parse_args()
     main()
