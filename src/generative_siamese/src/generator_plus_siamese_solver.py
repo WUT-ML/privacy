@@ -81,7 +81,8 @@ class SiameseGanSolver(object):
                 d_real_loss = self.contrastive_loss(output1, output2, label)
                 batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0])
                 if self.tensorboard:
-                    self.tb_writer.add_scalar('phase1/discriminator_real_loss', d_real_loss.data[0], step)
+                    self.tb_writer.add_scalar('phase1/discriminator_real_loss',
+                                              d_real_loss.data[0], step)
                     step += 1
 
                 # Backpropagation
@@ -138,7 +139,8 @@ class SiameseGanSolver(object):
                                                fake_images)
                 batch_monitor.set_postfix(d_fake_loss=d_fake_loss.data[0], g_loss=g_loss.data[0])
                 if self.tensorboard:
-                    self.tb_writer.add_scalar('phase2/discriminator_fake_loss', d_fake_loss.data[0], step)
+                    self.tb_writer.add_scalar('phase2/discriminator_fake_loss',
+                                              d_fake_loss.data[0], step)
                     self.tb_writer.add_scalar('phase2/generator_loss', g_loss.data[0], step)
                     step += 1
 
@@ -151,6 +153,8 @@ class SiameseGanSolver(object):
 
                 batch_monitor.update()
 
+            if self.tensorboard:
+                self._monitor(self.tb_writer, step)
             batch_monitor.close()
             epoch_monitor.update()
 
@@ -164,6 +168,22 @@ class SiameseGanSolver(object):
 
         if self.tensorboard:
             self.tb_writer.close()
+
+    def _monitor(self, writer, step, n_images=5):
+        """Generate preview images at given state of the generator."""
+        reals, fakes = [], []
+        for _, image, _ in self.data_loader.dataset:
+            image = image.unsqueeze(0)
+            reals.append(denorm(to_variable(image).data)[0])
+            noise = to_variable(torch.randn(1, self.noise_dim))
+            fakes.append(denorm(self.generator(noise, to_variable(image)).data)[0])
+            if len(reals) == n_images:
+                break
+
+        real_previews = torchvision.utils.make_grid(reals, nrow=n_images)
+        fake_previews = torchvision.utils.make_grid(fakes, nrow=n_images)
+        img = torchvision.utils.make_grid([real_previews, fake_previews], nrow=1)
+        writer.add_image('Previews', img, step)
 
     def sample(self):
         """Sample images."""
