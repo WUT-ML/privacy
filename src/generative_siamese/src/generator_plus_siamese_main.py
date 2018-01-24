@@ -1,23 +1,27 @@
 """Deep convolutional GAN with siamese discriminator."""
 
-from data_loader import TrFingerprints
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-from generator_plus_siamese_solver import SiameseGanSolver
 import argparse
 import os
+
+import torch
 from torch.backends import cudnn
+from torch.utils.data import DataLoader
+import torchvision.transforms as transforms
+
+from deterministic_data_loader import TrFingerprints
+from generator_plus_siamese_solver import SiameseGanSolver
 
 
 def main():
     """Entry point for GAN with siamese discriminator (training or sampling)."""
     cudnn.benchmark = True
+    cudnn.deterministic = True
+    torch.manual_seed(20180124)
 
     # Load and trasnform dataset
     dataset_transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize(size=config.image_size),
-        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
     ])
 
@@ -63,7 +67,7 @@ if __name__ == '__main__':
                         "NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt')
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--max_L2', type=int, default=5000)
-    parser.add_argument('--jobs', type=int, default=4)
+    parser.add_argument('--jobs', type=int, default=1)
     parser.add_argument('--batch', type=int, default=64)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=False)
