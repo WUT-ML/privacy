@@ -5,6 +5,7 @@ import tensorboardX
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.onnx
 from torch.autograd import Variable
 import torchvision
 from tqdm import tqdm
@@ -60,6 +61,7 @@ class SiameseGanSolver(object):
         """Train generator and discriminator."""
         if self.tensorboard:
             self.tb_writer = tensorboardX.SummaryWriter()
+            self.tb_graph_added = False
             step = 0
 
         # First train discriminator on real images
@@ -143,6 +145,15 @@ class SiameseGanSolver(object):
                                               d_fake_loss.data[0], step)
                     self.tb_writer.add_scalar('phase2/generator_loss', g_loss.data[0], step)
                     step += 1
+
+                    if not self.tb_graph_added:
+                        g_proto_path = os.path.join(self.model_path, 'generator.onnx')
+                        d_proto_path = os.path.join(self.model_path, 'discriminator.onnx')
+                        torch.onnx.export(self.generator, (noise, images0), g_proto_path)
+                        torch.onnx.export(self.discriminator, (images1, fake_images), d_proto_path)
+                        # self.tb_writer.add_graph_onnx(g_proto_path)  # requires onnx package
+                        # self.tb_writer.add_graph_onnx(d_proto_path)
+                        self.tb_graph_added = True
 
                 # Backpropagation
                 self.contrastive_loss.zero_grad()
