@@ -201,8 +201,8 @@ class SiameseGanSolver(object):
             output1, output2 = self.discriminator(images0, images1)
             preds = self.contrastive_loss(output1, output2, label, expand=True) > 0.5
             preds = preds.type(label.data.type())
-            correct_pairs += (preds * label).sum().data[0]
-            total_pairs += len(preds * label)
+            correct_pairs += (preds == label).sum().data[0]
+            total_pairs += len(preds == label)
             if total_pairs > 1000:
                 break
 
