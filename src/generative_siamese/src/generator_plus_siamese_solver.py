@@ -101,7 +101,7 @@ class SiameseGanSolver(object):
             epoch_monitor.update()
 
         epoch_monitor.close()
-
+        
         # Phase 2 - pairs of original & privatized
         # Goal of discriminator: (original, privatized) should count as same
         # Goal of generator: (original, privatized) pair should count as different
@@ -198,17 +198,13 @@ class SiameseGanSolver(object):
             images1 = to_variable(images1)
             label = to_variable(label)
 
-            # Distance should be small if images are from the same person
+            # Predict label = 1 if outputs are dissimilar (distance > margin)
             output1, output2 = self.discriminator(images0, images1)
-            distance = self.contrastive_loss(output1, output2, 0.0, expand=True)
+            predictions = self.contrastive_loss.predict(output1, output2)
+            predictions = predictions.type(label.data.type())
 
-            # Dissimilar if distance is greater than margin (predicted label = 1)
-            margin = self.contrastive_loss.margin
-            preds = distance > margin
-            preds = preds.type(label.data.type())
-
-            correct_pairs += (preds == label).sum().data[0]
-            total_pairs += len(preds == label)
+            correct_pairs += (predictions == label).sum().data[0]
+            total_pairs += len(predictions == label)
 
             if total_pairs > 1000:
                 break
