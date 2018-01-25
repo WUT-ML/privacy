@@ -101,7 +101,7 @@ class SiameseGanSolver(object):
             epoch_monitor.update()
 
         epoch_monitor.close()
-        
+
         # Phase 2 - pairs of original & privatized
         # Goal of discriminator: (original, privatized) should count as same
         # Goal of generator: (original, privatized) pair should count as different
