@@ -198,11 +198,18 @@ class SiameseGanSolver(object):
             images1 = to_variable(images1)
             label = to_variable(label)
 
+            # Distance should be small if images are from the same person
             output1, output2 = self.discriminator(images0, images1)
-            preds = self.contrastive_loss(output1, output2, label, expand=True) > 0.5
+            distance = self.contrastive_loss(output1, output2, 0.0, expand=True)
+
+            # Dissimilar if distance is greater than margin (predicted label = 1)
+            margin = self.contrastive_loss.margin
+            preds = distance > margin
             preds = preds.type(label.data.type())
+
             correct_pairs += (preds == label).sum().data[0]
             total_pairs += len(preds == label)
+
             if total_pairs > 1000:
                 break
 
