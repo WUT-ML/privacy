@@ -165,7 +165,8 @@ class SiameseGanSolver(object):
                         g_proto_path = os.path.join(self.model_path, 'generator.onnx')
                         d_proto_path = os.path.join(self.model_path, 'discriminator.onnx')
                         torch.onnx.export(self.generator, (noise, original_imgs), g_proto_path)
-                        torch.onnx.export(self.discriminator, (original_imgs, privatized_imgs), d_proto_path)
+                        torch.onnx.export(self.discriminator, (original_imgs, privatized_imgs),
+                                          d_proto_path)
                         # self.tb_writer.add_graph_onnx(g_proto_path)  # requires onnx package
                         # self.tb_writer.add_graph_onnx(d_proto_path)
                         self.tb_graph_added = True
