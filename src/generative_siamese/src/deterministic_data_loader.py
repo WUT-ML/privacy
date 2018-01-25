@@ -25,6 +25,7 @@ class TrFingerprints(Dataset):
         return 2000 * 2
 
     def get_img(self, person_id, instance):
+        """Get image of a given person."""
         assert instance == 'f' or instance == 's'
         assert person_id > 0 and person_id <= 2000
 
@@ -37,6 +38,7 @@ class TrFingerprints(Dataset):
         return np.expand_dims(scipy.misc.imread(img_path), 2)
 
     def __getitem__(self, index):
+        """Access item from dataset."""
         if index < 2000:
             # For 0-1999 return pairs of images for the same person with a given ID
             # Dataset index is zero-based, person ID is one-based
