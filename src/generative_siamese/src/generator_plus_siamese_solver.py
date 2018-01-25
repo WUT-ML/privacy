@@ -64,7 +64,7 @@ class SiameseGanSolver(object):
             self.tb_graph_added = False
             step = 0
 
-        # First train discriminator on real images
+        # First train discriminator to classify pairs as same vs different IDs
         tqdm.write('\nPhase 1 (train discriminator to classify image pairs as same/different ID)')
         epoch_monitor = tqdm(total=self.num_epochs)
         epoch_monitor.set_description('Epoch')
@@ -95,13 +95,16 @@ class SiameseGanSolver(object):
 
                 batch_monitor.update()
 
+            if self.tensorboard:
+                self._monitor_phase_1(self.tb_writer, step)
             batch_monitor.close()
             epoch_monitor.update()
 
         epoch_monitor.close()
 
-        # After discriminator is trained on real images,
-        # train discriminator on fake images and train generator to fool discriminator
+        # Phase 2 - pairs of original & privatized
+        # Goal of discriminator: (original, privatized) should count as same
+        # Goal of generator: (original, privatized) pair should count as different
         if self.tensorboard:
             step = 0
 
@@ -113,47 +116,37 @@ class SiameseGanSolver(object):
             batch_monitor = tqdm(total=len(self.data_loader))
             batch_monitor.set_description('Batch')
 
-            for label, images0, images1 in self.data_loader:
-                batch_size = images0.size(0)
+            for _, original_imgs, _ in self.data_loader:
+                batch_size = original_imgs.size(0)
                 noise = to_variable(torch.randn(batch_size, self.noise_dim))
 
-                images0 = to_variable(images0)
-                images1 = to_variable(images1)
-                label = to_variable(label)
+                original_imgs = to_variable(original_imgs)
+                privatized_imgs = self.generator(noise, original_imgs)
 
-                # Train discriminator to discriminate identity of real and fake images
-                fake_images = self.generator(noise, images0)
-                output1, output2 = self.discriminator(images1, fake_images)
-                d_fake_loss = self.contrastive_loss(output1, output2, 0)
+                output1, output2 = self.discriminator(original_imgs, privatized_imgs)
+
+                # Discriminator wants to minimize Euclidean distance between
+                # original & privatized versions, hence label = 0
+                d_loss = self.contrastive_loss(output1, output2, 0)
 
                 # Backpropagation
                 self.contrastive_loss.zero_grad()
                 self.discriminator.zero_grad()
                 self.generator.zero_grad()
-                d_fake_loss.backward()
+                d_loss.backward()
                 self.d_optimizer.step()
 
-                # Train Generator to fool Discriminator
-                noise = to_variable(torch.randn(batch_size, self.noise_dim))
-                fake_images = self.generator(noise, images0)
-                output1, output2 = self.discriminator(images1, fake_images)
-                g_loss = self.contrastive_loss(output1, output2, 0, self.max_L2, images0,
-                                               fake_images)
-                batch_monitor.set_postfix(d_fake_loss=d_fake_loss.data[0], g_loss=g_loss.data[0])
-                if self.tensorboard:
-                    self.tb_writer.add_scalar('phase2/discriminator_fake_loss',
-                                              d_fake_loss.data[0], step)
-                    self.tb_writer.add_scalar('phase2/generator_loss', g_loss.data[0], step)
-                    step += 1
+                # Generator wants to push the distance between original & privatized
+                # right to the margin, hence label = 1
 
-                    if not self.tb_graph_added:
-                        g_proto_path = os.path.join(self.model_path, 'generator.onnx')
-                        d_proto_path = os.path.join(self.model_path, 'discriminator.onnx')
-                        torch.onnx.export(self.generator, (noise, images0), g_proto_path)
-                        torch.onnx.export(self.discriminator, (images1, fake_images), d_proto_path)
-                        # self.tb_writer.add_graph_onnx(g_proto_path)  # requires onnx package
-                        # self.tb_writer.add_graph_onnx(d_proto_path)
-                        self.tb_graph_added = True
+                noise = to_variable(torch.randn(batch_size, self.noise_dim))
+                privatized_imgs = self.generator(noise, original_imgs)
+
+                output1, output2 = self.discriminator(original_imgs, privatized_imgs)
+                g_loss = self.contrastive_loss(output1, output2, 1)
+
+                # TODO: But subject to original vs privatized difference to be minimized?
+                #       Not sure yet if it's needed with such discriminator/generator formulation.
 
                 # Backpropagation
                 self.contrastive_loss.zero_grad()
@@ -162,10 +155,25 @@ class SiameseGanSolver(object):
                 g_loss.backward()
                 self.g_optimizer.step()
 
+                batch_monitor.set_postfix(d_loss=d_loss.data[0], g_loss=g_loss.data[0])
+                if self.tensorboard:
+                    self.tb_writer.add_scalar('phase2/discriminator_loss', d_loss.data[0], step)
+                    self.tb_writer.add_scalar('phase2/generator_loss', g_loss.data[0], step)
+                    step += 1
+
+                    if not self.tb_graph_added:
+                        g_proto_path = os.path.join(self.model_path, 'generator.onnx')
+                        d_proto_path = os.path.join(self.model_path, 'discriminator.onnx')
+                        torch.onnx.export(self.generator, (noise, original_imgs), g_proto_path)
+                        torch.onnx.export(self.discriminator, (original_imgs, privatized_imgs), d_proto_path)
+                        # self.tb_writer.add_graph_onnx(g_proto_path)  # requires onnx package
+                        # self.tb_writer.add_graph_onnx(d_proto_path)
+                        self.tb_graph_added = True
+
                 batch_monitor.update()
 
             if self.tensorboard:
-                self._monitor(self.tb_writer, step)
+                self._monitor_phase_2(self.tb_writer, step)
             batch_monitor.close()
             epoch_monitor.update()
 
@@ -180,7 +188,27 @@ class SiameseGanSolver(object):
         if self.tensorboard:
             self.tb_writer.close()
 
-    def _monitor(self, writer, step, n_images=5):
+    def _monitor_phase_1(self, writer, step):
+        correct_pairs = 0
+        total_pairs = 0
+
+        for label, images0, images1 in self.data_loader:
+            images0 = to_variable(images0)
+            images1 = to_variable(images1)
+            label = to_variable(label)
+
+            output1, output2 = self.discriminator(images0, images1)
+            preds = self.contrastive_loss(output1, output2, label, expand=True) > 0.5
+            preds = preds.type(label.data.type())
+            correct_pairs += (preds * label).sum().data[0]
+            total_pairs += len(preds * label)
+            if total_pairs > 1000:
+                break
+
+        accuracy = correct_pairs / total_pairs
+        writer.add_scalar('phase1/discriminator_accuracy', accuracy, step)
+
+    def _monitor_phase_2(self, writer, step, n_images=5):
         """Generate preview images at given state of the generator."""
         reals, fakes = [], []
         for _, image, _ in self.data_loader.dataset:

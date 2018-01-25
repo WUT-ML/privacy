@@ -99,23 +99,25 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, output2, label, max_L2=None, original_images=None, fake_images=None):
+    def forward(self, output1, output2, label, expand=False):
         """Define the computation performed at every call."""
         # Check constraint, if fake image does not differ too much from original image
-        if(original_images is not None and fake_images is not None and max_L2 is not None):
-            # Use L2 metric
-            distance = distanceL2(original_images, fake_images)
-            if ((distance.data[0]) > max_L2):
-                return distance
+        # if(original_images is not None and fake_images is not None and max_L2 is not None):
+        #     # Use L2 metric
+        #     distance = distanceL2(original_images, fake_images)
+        #     if ((distance.data[0]) > max_L2):
+        #         return distance
 
         # Otherwise use contrastive loss function
         euclidean_distance = F.pairwise_distance(output1, output2)
-        loss_contrastive = torch.mean((1-label) *
-                                      torch.pow(euclidean_distance, 2) +
-                                      label *
-                                      torch.pow(torch.clamp(self.margin -
-                                                            euclidean_distance, min=0.0), 2))
-        return loss_contrastive
+        clamped = torch.clamp(self.margin - euclidean_distance, min=0.0)
+        similar_loss = (1 - label) * 0.5 * torch.pow(euclidean_distance, 2)
+        dissimilar_loss = label * 0.5 * torch.pow(clamped, 2)
+        contrastive_loss = similar_loss + dissimilar_loss
+
+        if expand:
+            return contrastive_loss
+        return torch.mean(contrastive_loss)
 
 
 def distanceL2(image1, image2):
