@@ -42,3 +42,19 @@ File naming is `{instance}{ID}_{finger}.png`, where:
 - `{instance}` - either `f` or `s` for first and second instance,
 - `{ID}` - person identifier,
 - `{finger}` - finger identifier `[01-10]`.
+
+###### 2. Siamese GAN training
+
+Run in background/separate session:
+
+```bash
+tensorboard --logdir runs
+```
+
+Train model with TensorBoard visualizations:
+
+```bash
+python src/generative_siamese/src/generator_plus_siamese_main.py --image_path=data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/ --model_path=results/models --tensorboard  
+```
+
+This step will be superseded by a Luigi task in the future.

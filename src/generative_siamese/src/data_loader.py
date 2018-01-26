@@ -12,10 +12,10 @@ from torch.utils.data import Dataset
 class TrFingerprints(Dataset):
     """Data loader class for fingerprint NIST dataset."""
 
-    def __init__(self, transform):
+    def __init__(self, path, transform):
         """Construct data loader."""
         self.dirs_idx = (0, 1, 2, 3, 4, 5, 6, 7)
-        self.root_path = '../../../data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt'
+        self.root_path = path
         self.transform = transform
         np.random.seed(seed=datetime.now().microsecond)
 
