@@ -45,12 +45,12 @@ class TrFingerprints(Dataset):
 
         label = int(np.random.choice([0, 1]))
         data_dirs = sorted(os.listdir(self.root_path))
-        if label == 1:
+        if label == 0:
             dir_number = np.random.choice(self.dirs_idx)
             image_index = np.random.randint(low=1, high=251)
             img_1 = get_img('f')
             img_2 = get_img('s')
-        elif label == 0:
+        elif label == 1:
             dir_numbers = np.random.choice(self.dirs_idx, size=2, replace=True)
             image_indices = np.random.choice(np.arange(1, 251), size=2, replace=False)
             fs = ['f', 's']

@@ -8,7 +8,7 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-from deterministic_data_loader import TrFingerprints
+from deterministic_data_loader import TrFingerprints, Fingerprints
 from generator_plus_siamese_solver import SiameseGanSolver
 
 
@@ -25,16 +25,17 @@ def main():
         transforms.ToTensor(),
     ])
 
-    dataset = TrFingerprints(transform=dataset_transform, path=config.image_path)
-
     # Create directories if not exist
     if not os.path.exists(config.model_path):
         os.makedirs(config.model_path)
-    if not os.path.exists(config.sample_path):
-        os.makedirs(config.sample_path)
+    if not os.path.exists(config.generate_path):
+        os.makedirs(config.generate_path)
 
     # Train and sample the images
     if config.mode == 'train':
+
+        dataset = TrFingerprints(transform=dataset_transform, path=config.image_path)
+
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,
                                  batch_size=config.batch,
@@ -44,7 +45,10 @@ def main():
         # Train neural network
         solver = SiameseGanSolver(config, data_loader)
         solver.train()
-    elif config.mode == 'sample':
+    elif config.mode == 'generate':
+
+        dataset = Fingerprints(transform=dataset_transform, path=config.image_path)
+
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,
                                  batch_size=1,
@@ -52,9 +56,9 @@ def main():
                                  shuffle=True,
                                  drop_last=False)
 
-        # Sample images
+        # Generate images
         solver = SiameseGanSolver(config, data_loader)
-        solver.sample()
+        solver.generate()
 
 
 if __name__ == '__main__':
@@ -62,11 +66,11 @@ if __name__ == '__main__':
     parser.add_argument('--image_size', type=int, default=128)
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--model_path', type=str, default='../models')
-    parser.add_argument('--sample_path', type=str, default='../samples')
+    parser.add_argument('--generate_path', type=str, default='../samples')
     parser.add_argument('--image_path', type=str, default='../../../data/" \
                         "NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt')
     parser.add_argument('--num_epochs', type=int, default=100)
-    parser.add_argument('--max_L2', type=int, default=5000)
+    parser.add_argument('--max_L2', type=float, default=5000.0)
     parser.add_argument('--jobs', type=int, default=1)
     parser.add_argument('--batch', type=int, default=64)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')

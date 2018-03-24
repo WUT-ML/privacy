@@ -55,8 +55,59 @@ class TrFingerprints(Dataset):
             img_1 = self.get_img(person_id, 'f')
             img_2 = self.get_img(self.random.choice(others), self.random.choice(['f', 's']))
 
+        # Convert images to grayscale
+        if(img_1.ndim == 4):
+            img_1 = img_1[:, :, :, 0]
+        if(img_2.ndim == 4):
+            img_2 = img_2[:, :, :, 0]
+
         if self.transform:
             img_1 = self.transform(img_1)
             img_2 = self.transform(img_2)
 
         return torch.FloatTensor([label]), img_1, img_2
+
+
+class Fingerprints(TrFingerprints):
+    """Quasi-deterministic data loader class for fingerprint NIST dataset."""
+
+    def __init__(self, path, transform):
+        """Construct data loader."""
+        self.root_path = path
+        self.transform = transform
+        self.random = np.random.RandomState(seed=20180301)
+
+    def __len__(self):
+        """Return length of dataset."""
+        return 2000 * 2
+
+    def get_img(self, person_id, instance):
+        """Get image of a given person."""
+        assert instance == 'f' or instance == 's'
+        assert person_id > 0 and person_id <= 2000
+
+        figs_dir = (person_id - 1) // 250
+        dir_path = os.path.join('figs_{figs_dir}'.format(figs_dir=figs_dir), '')
+
+        img_name = '{instance}{person_id:04d}_'.format(instance=instance, person_id=person_id)
+        img_path = glob.glob(self.root_path + dir_path + img_name + '*.png')[0]
+        return np.expand_dims(scipy.misc.imread(img_path), 2), os.path.relpath(img_path,
+                                                                               self.root_path)
+
+    def __getitem__(self, index):
+        """Access item from dataset."""
+        if index < 2000:
+            # For 0-1999 return first image of person with a given ID
+            # Dataset index is zero-based, person ID is one-based
+            person_id = index + 1
+            img_1, path = self.get_img(person_id, 'f')
+        else:
+            # For 2000-3999 return second image of person with a given ID
+            # Dataset index is zero-based, person ID is one-based
+            person_id = index - 2000 + 1
+            img_1, path = self.get_img(person_id, 's')
+
+        if self.transform:
+            img_1 = self.transform(img_1)
+
+        return path, img_1
