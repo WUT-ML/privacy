@@ -192,7 +192,9 @@ class SiameseGanSolver(object):
         for _, image, _ in self.data_loader.dataset:
             image = image.unsqueeze(0)
             reals.append(denorm(to_variable(image).data)[0])
-            fakes.append(denorm(self.generator(to_variable(image)).data)[0])
+            noise = to_variable(torch.randn(1, self.noise_dim))
+
+            fakes.append(denorm(self.generator(to_variable(image), noise).data)[0])
             if len(reals) == n_images:
                 break
 
