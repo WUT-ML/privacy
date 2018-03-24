@@ -9,7 +9,7 @@ import torch.onnx
 from torch.autograd import Variable
 import torchvision
 from tqdm import tqdm
-from generator_plus_siamese_model import Generator, SiameseDiscriminator, DistanceBasedLoss
+from generator_plus_siamese_model import SimpleGenerator, SiameseDiscriminator, DistanceBasedLoss
 from generator_plus_siamese_model import distanceL2
 
 
@@ -26,6 +26,7 @@ class SiameseGanSolver(object):
         self.d_optimizer = None
 
         self.g_conv_dim = 128
+        self.noise_dim = 100
 
         self.beta1 = 0.9
         self.beta2 = 0.999
@@ -43,7 +44,7 @@ class SiameseGanSolver(object):
 
     def build_model(self):
         """Build generator and discriminator."""
-        self.generator = Generator(self.g_conv_dim)
+        self.generator = SimpleGenerator(self.noise_dim, self.image_size, self.g_conv_dim)
         self.discriminator = SiameseDiscriminator(self.image_size)
         self.distance_based_loss = DistanceBasedLoss(2.0)
 
@@ -91,7 +92,8 @@ class SiameseGanSolver(object):
 
                 # Train discriminator to recognize identity of fake(privatized) images
                 batch_size = images0.size(0)
-                privatized_imgs = self.generator(images0)
+                noise = to_variable(torch.randn(batch_size, self.noise_dim))
+                privatized_imgs = self.generator(images0, noise)
                 output0, output1 = self.discriminator(images0, privatized_imgs)
 
                 # Discriminator wants to minimize Euclidean distance between
@@ -110,7 +112,8 @@ class SiameseGanSolver(object):
                 # Train generator to fool discriminator
                 # Generator wants to push the distance between original & privatized
                 # right to the margin, hence label = 1
-                privatized_imgs = self.generator(images0)
+                noise = to_variable(torch.randn(batch_size, self.noise_dim))
+                privatized_imgs = self.generator(images0, noise)
                 output0, output1 = self.discriminator(images0, privatized_imgs)
                 g_loss = self.distance_based_loss(output0, output1, 1)
                 distance = distanceL2(privatized_imgs, images0)

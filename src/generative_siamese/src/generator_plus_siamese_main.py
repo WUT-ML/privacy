@@ -67,12 +67,11 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--model_path', type=str, default='../models')
     parser.add_argument('--generate_path', type=str, default='../samples')
-    parser.add_argument('--image_path', type=str, default='../../../data/" \
-                        "NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt')
+    parser.add_argument('--image_path', type=str, default='../../../data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/')
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--max_L2', type=float, default=5000.0)
     parser.add_argument('--jobs', type=int, default=1)
-    parser.add_argument('--batch', type=int, default=64)
+    parser.add_argument('--batch', type=int, default=16)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=False)
 

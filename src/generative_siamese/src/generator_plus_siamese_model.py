@@ -8,8 +8,50 @@ import math
 from torch.autograd import Variable
 
 
+class SimpleGenerator(nn.Module):
+    """Generator (forger) neural network.
+
+    This generator is not context-aware. It takes noise vector and adds difference to an image.
+    """
+
+    def __init__(self, noise_dim, img_size, conv_dim, kernel=4, stride=2, pad=1):
+        """Initialize generator."""
+        super(SimpleGenerator, self).__init__()
+
+        self.deconv1 = nn.ConvTranspose2d(noise_dim, conv_dim*8, int(img_size/16), 1, 0)
+        self.deconv2 = nn.ConvTranspose2d(conv_dim*8, conv_dim*4, kernel, stride, pad)
+        self.deconv2_bn = nn.BatchNorm2d(conv_dim*4)
+        self.deconv3 = nn.ConvTranspose2d(conv_dim*4, conv_dim*2, kernel, stride, pad)
+        self.deconv3_bn = nn.BatchNorm2d(conv_dim*2)
+        self.deconv4 = nn.ConvTranspose2d(conv_dim*2, conv_dim, kernel, stride, pad)
+        self.deconv4_bn = nn.BatchNorm2d(conv_dim)
+        self.deconv5 = nn.ConvTranspose2d(conv_dim, 1, kernel, stride, pad)
+
+    def forward(self, image, noise):
+        """Define the computation performed at every call."""
+        noise = noise.view(noise.size(0), noise.size(1), 1, 1)
+        out = self.deconv1(noise)
+        out = F.leaky_relu(out, 0.05)
+        out = self.deconv2(out)
+        out = self.deconv2_bn(out)
+        out = F.leaky_relu(out, 0.05)
+        out = self.deconv3(out)
+        out = self.deconv3_bn(out)
+        out = F.leaky_relu(out, 0.05)
+        out = self.deconv4(out)
+        out = self.deconv4_bn(out)
+        out = F.leaky_relu(out, 0.05)
+        out = self.deconv5(out)
+        out = F.tanh(out)
+
+        return out + image
+
+
 class Generator(nn.Module):
-    """Generator (forger) neural network."""
+    """Generator (forger) neural network.
+
+    This generator is context-aware. It uses UNET architecture.
+    """
 
     def __init__(self, conv_size, kernel=4, stride=2, pad=1):
         """Initialize generator."""
