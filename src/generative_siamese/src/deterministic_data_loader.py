@@ -1,4 +1,4 @@
-"""Quasi-deterministic data loader module for fingerprint dataset."""
+"""Quasi-deterministic data loader module for fingerprint and toy datasets."""
 from datetime import datetime
 import glob
 import os
@@ -9,6 +9,64 @@ import numpy as np
 import scipy.misc
 import torch
 from torch.utils.data import Dataset
+
+
+class TripletToyDataset(Dataset):
+    """Quasi-deterministic data loader class for toy-dataset."""
+
+    def __init__(self, path, transform):
+        """Construct data loader."""
+        self.root_path = path
+        self.transform = transform
+        self.random = np.random.RandomState(seed=20180324)
+        self.N_IDENTITIES = 80
+        self.N_VARIANTS = 10
+        self.TOTAL_N_VARIANTS = self.N_VARIANTS * (self.N_VARIANTS - 1) // 2
+
+        # Create list of pairs of variants
+        self.variants = []
+        for i in range(0, self.N_VARIANTS):
+            for j in range(i + 1, self.N_VARIANTS):
+                self.variants.append((i, j))
+
+    def __len__(self):
+        """Return length of dataset."""
+        return self.N_IDENTITIES * self.TOTAL_N_VARIANTS * 2
+
+    def get_img(self, person_id, variant_id):
+        """Get image of a given person."""
+        assert variant_id >= 0 or variant_id < self.N_VARIANTS
+        assert person_id > 0 and person_id <= self.N_IDENTITIES
+
+        img_name = '{id:02d}_{var:02d}_'.format(id=person_id, var=variant_id)
+        img_path = glob.glob(self.root_path + img_name + '*.png')[0]
+
+        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2)
+
+    def __getitem__(self, index):
+        """Access item from dataset."""
+        if index < self.TOTAL_N_VARIANTS * self.N_IDENTITIES:
+            # For 0-7199 return pairs of images for the same identity
+            # Dataset index is zero-based, person ID is one-based
+            label = 0  # 0 for same, 1 for different
+            person_id, variant_id = divmod(index + self.TOTAL_N_VARIANTS, self.TOTAL_N_VARIANTS)
+            variant_1, variant_2 = self.variants[variant_id]
+            img_1 = self.get_img(person_id, variant_1)
+            img_2 = self.get_img(person_id, variant_2)
+        else:
+            # For "virtual" indexes 7200-14399 return first image of the given id
+            # and an image of a different id
+            label = 1
+            person_id, variant_id = divmod(index - self.N_IDENTITIES * self.TOTAL_N_VARIANTS + self.TOTAL_N_VARIANTS, self.TOTAL_N_VARIANTS)
+            variant_1, variant_2 = self.variants[variant_id]
+            others = list(set(np.arange(1, self.N_IDENTITIES + 1)) - set([person_id]))
+            img_1 = self.get_img(person_id, variant_1)
+            img_2 = self.get_img(self.random.choice(others), variant_2)
+
+        if self.transform:
+            img_1 = self.transform(img_1)
+            img_2 = self.transform(img_2)
+        return torch.FloatTensor([label]), img_1, img_2
 
 
 class TrFingerprints(Dataset):
