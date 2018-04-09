@@ -8,7 +8,7 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-from deterministic_data_loader import TrFingerprints, Fingerprints, TripletToyDataset
+from deterministic_data_loader import TrFingerprints, Fingerprints, TripletToyDataset, ToyDataset
 from generator_plus_siamese_solver import SiameseGanSolver
 
 
@@ -47,7 +47,7 @@ def main():
         solver.train()
     elif config.mode == 'generate':
 
-        dataset = Fingerprints(transform=dataset_transform, path=config.image_path)
+        dataset = ToyDataset(transform=dataset_transform, path=config.image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,

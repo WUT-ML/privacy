@@ -69,6 +69,46 @@ class TripletToyDataset(Dataset):
         return torch.FloatTensor([label]), img_1, img_2
 
 
+class ToyDataset(Dataset):
+    """Quasi-deterministic data loader class for toy-dataset."""
+
+    def __init__(self, path, transform):
+        """Construct data loader."""
+        self.root_path = path
+        self.transform = transform
+        self.random = np.random.RandomState(seed=20180324)
+        self.N_IDENTITIES = 80
+        self.N_VARIANTS = 10
+
+    def __len__(self):
+        """Return length of dataset."""
+        return self.N_IDENTITIES * self.N_VARIANTS
+
+    def get_img(self, person_id, variant_id):
+        """Get image of a given person."""
+        assert variant_id >= 0 or variant_id < self.N_VARIANTS
+        assert person_id > 0 and person_id <= self.N_IDENTITIES
+
+        img_name = '{id:02d}_{var:02d}_'.format(id=person_id, var=variant_id)
+        img_path = glob.glob(self.root_path + img_name + '*.png')[0]
+
+        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), os.path.relpath(img_path,
+                                                                               self.root_path)
+
+    def __getitem__(self, index):
+        """Access item from dataset."""
+        if index < self.N_VARIANTS * self.N_IDENTITIES:
+            # For 0-799 return image
+            # Dataset index is zero-based, person ID is one-based
+            person_id, variant_id = divmod(index + self.N_VARIANTS, self.N_VARIANTS)
+            img_1, path = self.get_img(person_id, variant_id)
+
+        if self.transform:
+            img_1 = self.transform(img_1)
+
+        return path, img_1
+
+
 class TrFingerprints(Dataset):
     """Quasi-deterministic data loader class for fingerprint NIST dataset."""
 
