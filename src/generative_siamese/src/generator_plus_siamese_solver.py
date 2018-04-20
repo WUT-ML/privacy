@@ -151,7 +151,7 @@ class SiameseGanSolver(object):
         g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
         torch.save(self.generator.state_dict(), g_path)
         d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % (epoch+1))
-        torch.save(self.generator.state_dict(), d_path)
+        torch.save(self.discriminator.state_dict(), d_path)
 
         tqdm.write('\n\nTraining completed.')
 

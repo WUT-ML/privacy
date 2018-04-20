@@ -78,7 +78,7 @@ class ToyDataset(Dataset):
         self.transform = transform
         self.random = np.random.RandomState(seed=20180324)
         self.N_IDENTITIES = 80
-        self.N_VARIANTS = 10
+        self.N_VARIANTS = 100
 
     def __len__(self):
         """Return length of dataset."""
@@ -98,7 +98,7 @@ class ToyDataset(Dataset):
     def __getitem__(self, index):
         """Access item from dataset."""
         if index < self.N_VARIANTS * self.N_IDENTITIES:
-            # For 0-799 return image
+            # For 0-7999 return image
             # Dataset index is zero-based, person ID is one-based
             person_id, variant_id = divmod(index + self.N_VARIANTS, self.N_VARIANTS)
             img_1, path = self.get_img(person_id, variant_id)
