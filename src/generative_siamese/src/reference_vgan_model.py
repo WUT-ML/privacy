@@ -1,4 +1,4 @@
-"""Model of Privacy-Preserving Representation-Learning Variational Generative Adversarial Network."""
+"""Privacy-Preserving Representation-Learning Variational Generative Adversarial Network model."""
 
 import torch
 import torch.nn as nn
@@ -47,12 +47,12 @@ class Generator(nn.Module):
         c2 = F.leaky_relu(self.conv2_bn(self.conv2(c1)), 0.2)
         c3 = F.leaky_relu(self.conv3_bn(self.conv3(c2)), 0.2)
         c4 = F.leaky_relu(self.conv4_bn(self.conv4(c3)), 0.2)
-        fc11 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda() # mu layer
-        fc12 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda() # logvar layer
+        fc11 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda()  # mu layer
+        fc12 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda()  # logvar layer
 
         mu = fc11(c4.view(c4.size(0), -1))
         logvar = fc12(c4.view(c4.size(0), -1))
-        return mu, logvar        
+        return mu, logvar
 
     def decode(self, z, label):
         """Decode image from latent vector."""
@@ -66,18 +66,18 @@ class Generator(nn.Module):
         return decoder_out
 
     def reparameterize(self, mu, logvar):
-        """"z = mean + eps * sigma where eps is sampled from N(0, 1)."""
+        """Z = mean + eps * sigma where eps is sampled from N(0, 1)."""
         eps = Variable(torch.randn(mu.size(0), mu.size(1)))
         eps = eps.cuda()
         z = mu + eps * torch.exp(logvar/2)    # 2 for convert var to std
         return z
 
-
     def forward(self, input, label):
         """Define the computation performed at every call."""
         mu, logvar = self.encode(input)
         z = self.reparameterize(mu, logvar)
-        return self.decode(z, label)
+        return self.decode(z, label), mu, logvar
+
 
 class Discriminator(nn.Module):
     """Discriminator (detective) neural network."""
@@ -122,13 +122,13 @@ class Discriminator(nn.Module):
         discriminator_out_identity = fc_identity(discriminator_out_common)
         discriminator_out_attribute = fc_attribute(discriminator_out_common)
 
+        return (discriminator_out_fake,
+                self.softmax_identity(discriminator_out_identity),
+                self.softmax_attribute(discriminator_out_attribute))
 
-        return (discriminator_out_fake, self.softmax_identity(discriminator_out_identity), self.softmax_attribute(discriminator_out_attribute))
-        
 
 def normal_init(m, mean, std):
     """Initialize conv layer weights using normal distribution."""
     if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d):
         m.weight.data.normal_(mean, std)
         m.bias.data.zero_()
-

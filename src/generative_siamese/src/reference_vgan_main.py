@@ -9,6 +9,7 @@ from reference_data_loader import FERGDataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import tensorboardX as tb
+import os
 
 # Set parameters
 image_size = 64
@@ -24,7 +25,7 @@ dataset_transform = transforms.Compose([
 ])
 
 # Prepare dataset loader
-dataset = FERGDataset(transform=dataset_transform, path="../../../../../../FERG_DB_256/")
+dataset = FERGDataset(transform=dataset_transform, path="../../../../FERG_DB_256/")
 data_loader = DataLoader(dataset=dataset,
                          batch_size=256,
                          num_workers=4,
@@ -32,14 +33,13 @@ data_loader = DataLoader(dataset=dataset,
                          drop_last=False)
 
 
-
 def label_reshape_1d(label, label_dim):
     """Reshape label to list of zeros and ones."""
     out = torch.FloatTensor(len(label)).zero_()
     for i, l in enumerate(label):
         out[i] = l
-    
     return out
+
 
 def to_variable(tensor):
     """Convert tensor to variable."""
@@ -63,7 +63,6 @@ step = 0
 # Learning process
 for epoch in range(n_epochs):
     print("Epoch number: ", epoch)
-    
 
     train_discriminator = True
 
@@ -79,7 +78,7 @@ for epoch in range(n_epochs):
         labels = to_variable(labels)
         attr = to_variable(attr)
 
-        #----------------------TRAIN DISCRIMINATOR----------------------------
+        # ----------------------TRAIN DISCRIMINATOR----------------------------
         if(train_discriminator):
 
             # Train Discriminator on real images
@@ -102,16 +101,16 @@ for epoch in range(n_epochs):
             fake_ids_onehot = torch.zeros(batch_size, n_ids)
             fake_ids_onehot.scatter_(1, fake_ids, 1)
             fake_ids_onehot = to_variable(fake_ids_onehot)
-        
-            fake_images = g(images, fake_ids_onehot)
+
+            fake_images, _, _ = g(images, fake_ids_onehot)
             output_fake, _, _ = d(fake_images)
             loss = nn.BCEWithLogitsLoss().cuda()
             target = Variable(torch.zeros(output_fake.size()), requires_grad=True).cuda()
             d_loss_fake = loss(output_fake, target)
 
             # Combine losses
-            d_loss = 0.25 * d_loss_real + 0.5 * d_loss_id  + 0.25 * d_loss_attr + 0.25 * d_loss_fake
-        
+            d_loss = 0.25 * d_loss_real + 0.5 * d_loss_id + 0.25 * d_loss_attr + 0.25 * d_loss_fake
+
             # Backpropagation for discriminator
             d.zero_grad()
             g.zero_grad()
@@ -122,11 +121,12 @@ for epoch in range(n_epochs):
             tb_writer.add_scalar('discriminator_loss', d_loss.data[0], step)
 
             # Train generator twice as often as discriminator
-            train_discriminator = not train_discriminator
+            train_discriminator = False
 
+        else:
+            train_discriminator = True
 
-
-        #----------------------TRAIN GENERATOR----------------------------
+        # ----------------------TRAIN GENERATOR----------------------------
 
         # Train Generator
         batch_size = images.size(0)
@@ -136,22 +136,25 @@ for epoch in range(n_epochs):
         fake_ids_onehot = to_variable(fake_ids_onehot)
 
         # Generate fake images with controlled ids
-        fake_images = g(images, fake_ids_onehot)
+        fake_images, mu, logvar = g(images, fake_ids_onehot)
         output_fake, output_id, output_attr = d(fake_images)
 
-        # Train Generator to fool fake/real Discriminator 
+        # Train Generator to fool fake/real Discriminator
         loss = nn.BCEWithLogitsLoss().cuda()
         target = Variable(torch.ones(output_fake.size()), requires_grad=True).cuda()
         g_loss_fake = loss(output_fake, target)
-        
+
         # Train Generator to fool id Discriminator
         g_loss_id = F.cross_entropy(output_id, to_variable(fake_ids.long().squeeze()))
 
         # Train Generator to fool attr Discriminator
         g_loss_attr = F.cross_entropy(output_attr, attr.long())
 
-        # Combine losses 
-        g_loss = 0.11 * g_loss_fake + 0.6 * g_loss_id  + 0.29 * g_loss_attr
+        # Compute Kullback-Leibler divergence
+        kld_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+
+        # Combine losses
+        g_loss = 0.108 * g_loss_fake + 0.6 * g_loss_id + 0.29 * g_loss_attr + 0.002 * kld_loss
 
         # Backpropagation for generator
         g.zero_grad()
@@ -163,7 +166,7 @@ for epoch in range(n_epochs):
         step += 1
 
     # At the end of each tenth epoch save generator and discriminator to file
-    if( ( epoch + 1 ) % 10 == 0):
+    if((epoch + 1) % 10 == 0):
         g_path = os.path.join(os.getcwd(), 'generator-%d.pkl' % (epoch+1))
         torch.save(g.state_dict(), g_path)
         d_path = os.path.join(os.getcwd(), 'discriminator-%d.pkl' % (epoch+1))

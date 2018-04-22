@@ -34,9 +34,11 @@ class FERGDataset(Dataset):
         img_name = self.filenames.iloc[index, 0]
         img_path = os.path.join(self.root_path, img_name)
         rel_path = os.path.relpath(img_path, self.root_path)
-        attr = FERGAttributes(rel_path)
+        attributes = FERGAttributes(rel_path)
+        attr = attributes.get_attr()
+        id = attributes.get_id()
 
-        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), attr.get_id(), attr.get_attr()
+        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), id, attr
 
     def __getitem__(self, index):
         """Access item from dataset."""
@@ -48,19 +50,24 @@ class FERGDataset(Dataset):
 
         return img_1, id, attr
 
+
 class FERGAttributes():
     """Class representing id and attributes for images from FERG dataset."""
 
-    dict_id = {'aia' : 0, 'bonnie' : 1, 'jules' : 2, 'malcolm' : 3, 'mery' : 4, 'ray' : 5}
-    dict_attr = {'anger' : 0, 'disgust' : 1, 'fear' : 2, 'joy' : 3, 'neutral' : 4, 'sadness' : 5, 'surprise' : 6}
+    dict_id = {'aia': 0, 'bonnie': 1, 'jules': 2, 'malcolm': 3, 'mery': 4, 'ray': 5}
+    dict_attr = {'anger': 0, 'disgust': 1, 'fear': 2, 'joy': 3, 'neutral': 4, 'sadness': 5,
+                 'surprise': 6}
 
     def __init__(self, path):
+        """Initialize object, use file path to read id and attribute."""
         id_key, attr_key = (path.split('/')[1]).split('_')
         self.id = FERGAttributes.dict_id[id_key]
         self.attr = FERGAttributes.dict_attr[attr_key]
 
     def get_attr(self):
+        """Get attribute."""
         return self.attr
 
     def get_id(self):
+        """Get id."""
         return self.id

@@ -57,7 +57,8 @@ class TripletToyDataset(Dataset):
             # For "virtual" indexes 7200-14399 return first image of the given id
             # and an image of a different id
             label = 1
-            person_id, variant_id = divmod(index - self.N_IDENTITIES * self.TOTAL_N_VARIANTS + self.TOTAL_N_VARIANTS, self.TOTAL_N_VARIANTS)
+            person_id, variant_id = divmod(index - self.N_IDENTITIES * self.TOTAL_N_VARIANTS +
+                                           self.TOTAL_N_VARIANTS, self.TOTAL_N_VARIANTS)
             variant_1, variant_2 = self.variants[variant_id]
             others = list(set(np.arange(1, self.N_IDENTITIES + 1)) - set([person_id]))
             img_1 = self.get_img(person_id, variant_1)
@@ -91,9 +92,9 @@ class ToyDataset(Dataset):
 
         img_name = '{id:02d}_{var:02d}_'.format(id=person_id, var=variant_id)
         img_path = glob.glob(self.root_path + img_name + '*.png')[0]
+        rel_path = os.path.relpath(img_path, self.root_path)
 
-        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), os.path.relpath(img_path,
-                                                                               self.root_path)
+        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), rel_path
 
     def __getitem__(self, index):
         """Access item from dataset."""
