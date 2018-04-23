@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 from torch.autograd import Variable
 from reference_vgan_model import Generator, Discriminator
 from reference_data_loader import FERGDataset
@@ -22,12 +23,13 @@ dataset_transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize(size=image_size),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
 # Prepare dataset loader
 dataset = FERGDataset(transform=dataset_transform, path="../../../../FERG_DB_256/")
 data_loader = DataLoader(dataset=dataset,
-                         batch_size=256,
+                         batch_size=64,
                          num_workers=4,
                          shuffle=True,
                          drop_last=False)
@@ -44,6 +46,12 @@ def label_reshape_1d(label, label_dim):
 def to_variable(tensor):
     """Convert tensor to variable."""
     return Variable(tensor.cuda())
+
+
+def denorm(image):
+    """Convert image range (-1, 1) to (0, 1)."""
+    out = (image + 1) / 2
+    return out.clamp(0, 1)
 
 
 # Initialize Generator and Discriminator networks
@@ -171,6 +179,24 @@ for epoch in range(n_epochs):
         torch.save(g.state_dict(), g_path)
         d_path = os.path.join(os.getcwd(), 'discriminator-%d.pkl' % (epoch+1))
         torch.save(d.state_dict(), d_path)
+
+    # At the end of each epoch generate sample images
+    reals, fakes = [], []
+    batch_size = images.size(0)
+    fake_ids = torch.LongTensor(batch_size, 1).random_() % n_ids
+    fake_ids_onehot = torch.zeros(batch_size, n_ids)
+    fake_ids_onehot.scatter_(1, fake_ids, 1)
+    fake_ids_onehot = to_variable(fake_ids_onehot)
+    for images, _, _ in data_loader:
+        reals.append(denorm(to_variable(images).data))
+        fakes.append(denorm((g(to_variable(images), fake_ids_onehot)[0]).data))
+        break
+
+    # Write images to tensorboard
+    real_previews = torchvision.utils.make_grid(reals[0])
+    fake_previews = torchvision.utils.make_grid(fakes[0])
+    tb_writer.add_image('True images', real_previews, step)
+    tb_writer.add_image('Generated images', fake_previews, step)
 
 # Close tensorboard
 tb_writer.close()

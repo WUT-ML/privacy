@@ -38,7 +38,7 @@ class FERGDataset(Dataset):
         attr = attributes.get_attr()
         id = attributes.get_id()
 
-        return np.expand_dims(scipy.misc.imread(img_path, mode="L"), 2), id, attr
+        return scipy.misc.imread(img_path, mode="RGB"), id, attr
 
     def __getitem__(self, index):
         """Access item from dataset."""

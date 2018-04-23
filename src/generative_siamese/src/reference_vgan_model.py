@@ -16,7 +16,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         # Encoder
-        self.conv1 = nn.Conv2d(1, conv_size, kernel, stride)
+        self.conv1 = nn.Conv2d(3, conv_size, kernel, stride)
         self.conv1_bn = nn.BatchNorm2d(conv_size)
         self.conv2 = nn.Conv2d(conv_size, conv_size * 2, kernel, stride)
         self.conv2_bn = nn.BatchNorm2d(conv_size * 2)
@@ -32,7 +32,7 @@ class Generator(nn.Module):
         self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
         self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride)
         self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
-        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, 1, kernel, stride)
+        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, 3, kernel, stride)
 
         self.weight_init()
 
@@ -89,7 +89,7 @@ class Discriminator(nn.Module):
         self.n_classes = n_classes
         self.n_attributes = n_attributes
 
-        self.conv1 = nn.Conv2d(1, conv_size, kernel, stride)
+        self.conv1 = nn.Conv2d(3, conv_size, kernel, stride)
         self.conv1_bn = nn.BatchNorm2d(conv_size)
         self.conv2 = nn.Conv2d(conv_size, conv_size * 2, kernel, stride)
         self.conv2_bn = nn.BatchNorm2d(conv_size * 2)
