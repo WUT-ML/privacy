@@ -20,7 +20,7 @@ class FERGDataset(Dataset):
         self.root_path = path
         self.transform = transform
         self.random = np.random.RandomState(seed=20180419)
-        self.filenames = pd.read_csv(os.path.join(path, "images.csv"))
+        self.filenames = pd.read_csv(os.path.join(path, "images.csv"), header=None)
         self.N_IMAGES = self.filenames.shape[0]
 
     def __len__(self):
@@ -37,8 +37,10 @@ class FERGDataset(Dataset):
         attributes = FERGAttributes(rel_path)
         attr = attributes.get_attr()
         id = attributes.get_id()
+        img = scipy.misc.imread(img_path, mode="RGBA")
+        img[img[:,:,3]==0] = 255
 
-        return scipy.misc.imread(img_path, mode="RGB"), id, attr
+        return img[:,:,0:3], id, attr
 
     def __getitem__(self, index):
         """Access item from dataset."""

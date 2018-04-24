@@ -25,14 +25,20 @@ class Generator(nn.Module):
         self.conv4 = nn.Conv2d(conv_size * 4, conv_size * 8, kernel, stride)
         self.conv4_bn = nn.BatchNorm2d(conv_size * 8)
 
+        # Bottleneck (mu and logvar layers)
+        # TODO 256 and 134 are valid only for 64x64 images and 6 ids
+        self.fc11 = nn.Linear(256, 128)
+        self.fc12 = nn.Linear(256, 128)
+        self.fc2 = nn.Linear(134, 2048)
+
         # Decoder
-        self.deconv1 = nn.ConvTranspose2d(conv_size * 4, conv_size * 8, kernel, stride)
+        self.deconv1 = nn.ConvTranspose2d(conv_size * 4, conv_size * 8, kernel, stride, 1)
         self.deconv1_bn = nn.BatchNorm2d(conv_size * 8)
-        self.deconv2 = nn.ConvTranspose2d(conv_size * 8, conv_size * 4, kernel, stride)
+        self.deconv2 = nn.ConvTranspose2d(conv_size * 8, conv_size * 4, kernel, stride, 2)
         self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
-        self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride)
+        self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride, 2)
         self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
-        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, 3, kernel, stride)
+        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, 3, kernel+1, stride, 3)
 
         self.weight_init()
 
@@ -47,18 +53,15 @@ class Generator(nn.Module):
         c2 = F.leaky_relu(self.conv2_bn(self.conv2(c1)), 0.2)
         c3 = F.leaky_relu(self.conv3_bn(self.conv3(c2)), 0.2)
         c4 = F.leaky_relu(self.conv4_bn(self.conv4(c3)), 0.2)
-        fc11 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda()  # mu layer
-        fc12 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 128).cuda()  # logvar layer
 
-        mu = fc11(c4.view(c4.size(0), -1))
-        logvar = fc12(c4.view(c4.size(0), -1))
+        mu = self.fc11(c4.view(c4.size(0), -1))
+        logvar = self.fc12(c4.view(c4.size(0), -1))
         return mu, logvar
 
     def decode(self, z, label):
         """Decode image from latent vector."""
         input = torch.cat([z, label], 1)
-        fc2 = nn.Linear(input.shape[1], 2048).cuda()
-        decoder_in = F.leaky_relu(fc2(input).view(-1, 128, 4, 4), 0.2)
+        decoder_in = F.leaky_relu(self.fc2(input).view(-1, 128, 4, 4), 0.2)
         d1 = F.leaky_relu(self.deconv1_bn(self.deconv1(decoder_in)), 0.2)
         d2 = F.leaky_relu(self.deconv2_bn(self.deconv2(d1)), 0.2)
         d3 = F.leaky_relu(self.deconv3_bn(self.deconv3(d2)), 0.2)
@@ -97,6 +100,14 @@ class Discriminator(nn.Module):
         self.conv3_bn = nn.BatchNorm2d(conv_size * 4)
         self.conv4 = nn.Conv2d(conv_size * 4, conv_size * 8, kernel, stride)
         self.conv4_bn = nn.BatchNorm2d(conv_size * 8)
+
+        # TODO 256 is valid only for 64x64 input images
+        self.fc1 = nn.Linear(256, 256)
+
+        self.fc_fake = nn.Linear(256, 1)
+        self.fc_identity = nn.Linear(256, self.n_classes)
+        self.fc_attribute = nn.Linear(256, self.n_attributes)
+
         self.softmax_identity = nn.Softmax()
         self.softmax_attribute = nn.Softmax()
 
@@ -113,14 +124,10 @@ class Discriminator(nn.Module):
         c2 = F.leaky_relu(self.conv2_bn(self.conv2(c1)), 0.2)
         c3 = F.leaky_relu(self.conv3_bn(self.conv3(c2)), 0.2)
         c4 = F.leaky_relu(self.conv4_bn(self.conv4(c3)), 0.2)
-        fc1 = nn.Linear(c4.shape[1] * c4.shape[2] * c4.shape[3], 256).cuda()
-        fc_fake = nn.Linear(256, 1).cuda()
-        fc_identity = nn.Linear(256, self.n_classes).cuda()
-        fc_attribute = nn.Linear(256, self.n_attributes).cuda()
-        discriminator_out_common = F.leaky_relu(fc1(c4.view(c4.size(0), -1)), 0.2)
-        discriminator_out_fake = fc_fake(discriminator_out_common)
-        discriminator_out_identity = fc_identity(discriminator_out_common)
-        discriminator_out_attribute = fc_attribute(discriminator_out_common)
+        discriminator_out_common = F.leaky_relu(self.fc1(c4.view(c4.size(0), -1)), 0.2)
+        discriminator_out_fake = self.fc_fake(discriminator_out_common)
+        discriminator_out_identity = self.fc_identity(discriminator_out_common)
+        discriminator_out_attribute = self.fc_attribute(discriminator_out_common)
 
         return (discriminator_out_fake,
                 self.softmax_identity(discriminator_out_identity),
