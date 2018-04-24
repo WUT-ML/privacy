@@ -24,7 +24,8 @@ dataset_transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize(size=image_size),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    transforms.Normalize(mean=[0.2516, 0.1957, 0.1495],
+                         std=[0.2174, 0.1772, 0.1569])
 ])
 
 # Prepare dataset loader
