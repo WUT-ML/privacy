@@ -17,6 +17,7 @@ image_size = 64
 n_ids = 6
 n_attrs = 7
 n_epochs = 200
+BATCH_SIZE = 256
 
 # Define image transformation
 dataset_transform = transforms.Compose([
@@ -29,7 +30,7 @@ dataset_transform = transforms.Compose([
 # Prepare dataset loader
 dataset = FERGDataset(transform=dataset_transform, path="../../../../FERG_DB_256/")
 data_loader = DataLoader(dataset=dataset,
-                         batch_size=256,
+                         batch_size=BATCH_SIZE,
                          num_workers=4,
                          shuffle=True,
                          drop_last=False)
@@ -191,11 +192,11 @@ for epoch in range(n_epochs):
 
     # At the end of each epoch generate sample images
     reals, fakes = [], []
-    batch_size = images.size(0)
-    fake_ids = torch.LongTensor(batch_size, 1).random_() % n_ids
-    fake_ids_onehot = torch.zeros(batch_size, n_ids)
+    fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
+    fake_ids_onehot = torch.zeros(BATCH_SIZE, n_ids)
     fake_ids_onehot.scatter_(1, fake_ids, 1)
     fake_ids_onehot = to_variable(fake_ids_onehot)
+
     for images, _, _ in data_loader:
         reals.append(denorm(to_variable(images).data))
         fakes.append(denorm((g(to_variable(images), fake_ids_onehot)[0]).data))
