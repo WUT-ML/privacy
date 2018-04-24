@@ -29,7 +29,7 @@ dataset_transform = transforms.Compose([
 # Prepare dataset loader
 dataset = FERGDataset(transform=dataset_transform, path="../../../../FERG_DB_256/")
 data_loader = DataLoader(dataset=dataset,
-                         batch_size=64,
+                         batch_size=256,
                          num_workers=4,
                          shuffle=True,
                          drop_last=False)
@@ -127,6 +127,10 @@ for epoch in range(n_epochs):
 
             # Update tensorboard
             tb_writer.add_scalar('discriminator_loss', d_loss.data[0], step)
+            tb_writer.add_scalar('d1_loss', d_loss_real.data[0], step)
+            tb_writer.add_scalar('d1_loss_fake', d_loss_fake.data[0], step)
+            tb_writer.add_scalar('d2_loss', d_loss_id.data[0], step)
+            tb_writer.add_scalar('d3_loss', d_loss_attr.data[0], step)
 
             # Train generator twice as often as discriminator
             train_discriminator = False
@@ -171,6 +175,11 @@ for epoch in range(n_epochs):
         g_optimizer.step()
 
         tb_writer.add_scalar('generator_loss', g_loss.data[0], step)
+        tb_writer.add_scalar('g1_loss', g_loss_fake.data[0], step)
+        tb_writer.add_scalar('g2_loss', d_loss_id.data[0], step)
+        tb_writer.add_scalar('g3_loss', d_loss_attr.data[0], step)
+        tb_writer.add_scalar('kld_loss', kld_loss.data[0], step)
+
         step += 1
 
     # At the end of each tenth epoch save generator and discriminator to file
