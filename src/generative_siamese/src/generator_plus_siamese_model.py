@@ -108,6 +108,13 @@ class SiameseDiscriminator(nn.Module):
 
             nn.Linear(500, 15))
 
+        self.weight_init()
+
+    def weight_init(self, mean=0.0, std=0.01):
+        """Initilize weights."""
+        for m in self._modules:
+            normal_init(self._modules[m], mean, std)
+
     def forward_once(self, x):
         """Define the computation performed at every call by one side of siamese network."""
         output = self.cnn1(x)

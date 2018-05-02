@@ -134,8 +134,96 @@ class Discriminator(nn.Module):
                 self.softmax_attribute(discriminator_out_attribute))
 
 
+class SiameseDiscriminator(nn.Module):
+    """Discriminator neural network, using siamese networks."""
+
+    def __init__(self, image_size):
+        """Set parameters of discriminator neural network."""
+        super(SiameseDiscriminator, self).__init__()
+        self.cnn1 = nn.Sequential(
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(3, 4, kernel_size=3),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.BatchNorm2d(4),
+            nn.Dropout2d(p=.2),
+
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(4, 8, kernel_size=3),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.BatchNorm2d(8),
+            nn.Dropout2d(p=.2),
+
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(8, 8, kernel_size=3),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.BatchNorm2d(8),
+            nn.Dropout2d(p=.2))
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(8 * image_size * image_size, 500),
+            nn.LeakyReLU(0.1, inplace=True),
+
+            nn.Linear(500, 500),
+            nn.LeakyReLU(0.1, inplace=True),
+
+            nn.Linear(500, 15))
+
+        self.weight_init()
+
+    def weight_init(self, mean=0.0, std=0.01):
+        """Initilize weights."""
+        for m in self._modules:
+            normal_init(self._modules[m], mean, std)
+
+    def forward_once(self, x):
+        """Define the computation performed at every call by one side of siamese network."""
+        output = self.cnn1(x)
+        output = output.view(output.size()[0], -1)
+        output = self.fc1(output)
+        return output
+
+    def forward(self, input1, input2):
+        """Define the computation performed at every call."""
+        output1 = self.forward_once(input1)
+        output2 = self.forward_once(input2)
+        return output1, output2
+
+
+class DistanceBasedLoss(torch.nn.Module):
+    """
+    Distance based loss function.
+
+    For reference see:
+    Hadsell et al., CVPR'06
+    Chopra et al., CVPR'05
+    Vo and Hays, ECCV'16
+    """
+
+    def __init__(self, margin):
+        """Set parameters of distance-based loss function."""
+        super(DistanceBasedLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label):
+        """Define the computation performed at every call."""
+        euclidean_distance = F.pairwise_distance(output1, output2)
+        distance_from_margin = torch.clamp(torch.pow(euclidean_distance, 2) - self.margin, max=50.0)
+        exp_distance_from_margin = torch.exp(distance_from_margin)
+        distance_based_loss = (1.0 + math.exp(-self.margin)) / (1.0 + exp_distance_from_margin)
+        similar_loss = -0.5 * (1 - label) * torch.log(distance_based_loss)
+        dissimilar_loss = -0.5 * label * torch.log(1.0 - distance_based_loss)
+        return torch.mean(similar_loss + dissimilar_loss)
+
+    def predict(self, output1, output2, threshold_factor=0.5):
+        """Predict a dissimilarity label given two embeddings.
+
+        Return `1` if dissimilar.
+        """
+        return F.pairwise_distance(output1, output2) > self.margin * threshold_factor
+
+
 def normal_init(m, mean, std):
     """Initialize conv layer weights using normal distribution."""
-    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d):
+    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
         m.weight.data.normal_(mean, std)
         m.bias.data.zero_()

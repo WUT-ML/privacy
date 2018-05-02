@@ -5,3 +5,4 @@ luigi
 tqdm
 tensorflow
 tensorboardX
+pandas

@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
-from reference_vgan_model import Generator, Discriminator
+from reference_vgan_model import Generator, Discriminator, SiameseDiscriminator, DistanceBasedLoss
 from reference_data_loader import FERGDataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -17,7 +17,7 @@ image_size = 64
 n_ids = 6
 n_attrs = 7
 n_epochs = 100
-BATCH_SIZE = 256
+BATCH_SIZE = 16
 MEAN = [0.2516, 0.1957, 0.1495]
 STD = [0.2174, 0.1772, 0.1569]
 
@@ -53,7 +53,7 @@ def to_variable(tensor):
 
 
 def denorm(image):
-    """Apply inverse transformation to noramlization"""
+    """Apply inverse transformation to noramlization."""
     std_tensor = torch.FloatTensor(STD)
     std_tensor.unsqueeze_(0)
     std_tensor = std_tensor.expand(BATCH_SIZE, -1)
@@ -73,18 +73,23 @@ def denorm(image):
 # Initialize Generator and Discriminator networks
 g = Generator()
 d = Discriminator(n_ids, n_attrs)
+siam = SiameseDiscriminator(image_size)
+distance_loss = DistanceBasedLoss(2.0)
 g.cuda()
 d.cuda()
+siam.cuda()
+distance_loss.cuda()
 
 # Define optimizers
 g_optimizer = torch.optim.RMSprop(g.parameters(), 0.0002)
 d_optimizer = torch.optim.RMSprop(d.parameters(), 0.0002)
+siam_optimizer = torch.optim.RMSprop(siam.parameters(), 0.0002)
 
 # Tensorboar writer to visualize loss functions
 tb_writer = tb.SummaryWriter()
 step = 0
 
-# Train generator GENERATOR_TRAIN_RATIO as aoften as discriminator
+# Train generator GENERATOR_TRAIN_RATIO as often as discriminator
 GENERATOR_TRAIN_RATIO = 1
 
 
@@ -95,22 +100,25 @@ for epoch in range(n_epochs):
     train_generator = GENERATOR_TRAIN_RATIO
 
     # Preapre a minibatch
-    for images, id, attr in data_loader:
+    for images0, id, attr, images1, labels_binary in data_loader:
 
         # Reshape ids and attrs
         labels = label_reshape_1d(id, n_ids)
         attr = label_reshape_1d(attr, n_attrs)
 
         # Convert tensors to variables
-        images = to_variable(images)
+        images0 = to_variable(images0)
         labels = to_variable(labels)
         attr = to_variable(attr)
 
+        images1 = to_variable(images1)
+        labels_binary = to_variable(labels_binary)
+
         # ----------------------TRAIN DISCRIMINATOR----------------------------
-        if(train_generator==GENERATOR_TRAIN_RATIO):
+        if(train_generator == GENERATOR_TRAIN_RATIO):
 
             # Train Discriminator on real images
-            output_fake, output_id, output_attr = d(images)
+            output_fake, output_id, output_attr = d(images0)
 
             # Train Discriminator to recognize real images as real
             loss = nn.BCEWithLogitsLoss().cuda()
@@ -124,26 +132,35 @@ for epoch in range(n_epochs):
             d_loss_attr = F.cross_entropy(output_attr, attr.long())
 
             # Train Discriminator to recognize fake images as fake
-            batch_size = images.size(0)
+            batch_size = images0.size(0)
             fake_ids = torch.LongTensor(batch_size, 1).random_() % n_ids
             fake_ids_onehot = torch.zeros(batch_size, n_ids)
             fake_ids_onehot.scatter_(1, fake_ids, 1)
             fake_ids_onehot = to_variable(fake_ids_onehot)
 
-            fake_images, _, _ = g(images, fake_ids_onehot)
+            fake_images, _, _ = g(images0, fake_ids_onehot)
             output_fake, _, _ = d(fake_images)
             loss = nn.BCEWithLogitsLoss().cuda()
             target = Variable(torch.zeros(output_fake.size()), requires_grad=True).cuda()
             d_loss_fake = loss(output_fake, target)
 
+            # Train Siamese Discriminator on real images
+            d_siam_real = distance_loss(*siam(images0, images1), labels_binary)
+
+            # Train Siamese Discriminator on fake images
+            d_siam_fake = distance_loss(*siam(fake_images, images1), to_variable(torch.zeros(batch_size)))
+
             # Combine losses
             d_loss = 0.25 * d_loss_real + 0.5 * d_loss_id + 0.25 * d_loss_attr + 0.25 * d_loss_fake
+            d_loss += 0.01 * (d_siam_real + d_siam_fake)
 
             # Backpropagation for discriminator
             d.zero_grad()
             g.zero_grad()
+            siam.zero_grad()
             d_loss.backward()
             d_optimizer.step()
+            siam_optimizer.step()
 
             # Update tensorboard
             tb_writer.add_scalar('discriminator_loss', d_loss.data[0], step)
@@ -151,6 +168,8 @@ for epoch in range(n_epochs):
             tb_writer.add_scalar('d1_loss_fake', d_loss_fake.data[0], step)
             tb_writer.add_scalar('d2_loss', d_loss_id.data[0], step)
             tb_writer.add_scalar('d3_loss', d_loss_attr.data[0], step)
+            tb_writer.add_scalar('d_siam_real', d_siam_real.data[0], step)
+            tb_writer.add_scalar('d_siam_fake', d_siam_fake.data[0], step)
 
             train_generator = 0
 
@@ -160,14 +179,14 @@ for epoch in range(n_epochs):
         # ----------------------TRAIN GENERATOR----------------------------
 
         # Train Generator
-        batch_size = images.size(0)
+        batch_size = images0.size(0)
         fake_ids = torch.LongTensor(batch_size, 1).random_() % n_ids
         fake_ids_onehot = torch.zeros(batch_size, n_ids)
         fake_ids_onehot.scatter_(1, fake_ids, 1)
         fake_ids_onehot = to_variable(fake_ids_onehot)
 
         # Generate fake images with controlled ids
-        fake_images, mu, logvar = g(images, fake_ids_onehot)
+        fake_images, mu, logvar = g(images0, fake_ids_onehot)
         output_fake, output_id, output_attr = d(fake_images)
 
         # Train Generator to fool fake/real Discriminator
@@ -184,12 +203,17 @@ for epoch in range(n_epochs):
         # Compute Kullback-Leibler divergence
         kld_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
+        # Train Siamese Discriminator
+        g_siam = distance_loss(*siam(fake_images, images1), to_variable(torch.ones(batch_size)))
+
         # Combine losses
         g_loss = 0.108 * g_loss_fake + 0.6 * g_loss_id + 0.29 * g_loss_attr + 0.002 * kld_loss
+        g_loss += 0.01 * g_siam
 
         # Backpropagation for generator
         g.zero_grad()
         d.zero_grad()
+        siam.zero_grad()
         g_loss.backward()
         g_optimizer.step()
 
@@ -198,8 +222,7 @@ for epoch in range(n_epochs):
         tb_writer.add_scalar('g2_loss', d_loss_id.data[0], step)
         tb_writer.add_scalar('g3_loss', d_loss_attr.data[0], step)
         tb_writer.add_scalar('kld_loss', kld_loss.data[0], step)
-
-        step += 1
+        tb_writer.add_scalar('g_siam', g_siam.data[0], step)
 
     # At the end of each tenth epoch save generator and discriminator to file
     if((epoch + 1) % 10 == 0):
@@ -210,12 +233,12 @@ for epoch in range(n_epochs):
 
     # At the end of each epoch generate sample images
     reals, fakes = [], []
-    #fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
+    # fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
     fake_ids_onehot = torch.zeros(BATCH_SIZE, n_ids)
-    #fake_ids_onehot.scatter_(1, fake_ids, 1)
+    # fake_ids_onehot.scatter_(1, fake_ids, 1)
     fake_ids_onehot = to_variable(fake_ids_onehot)
 
-    for images, _, _ in data_loader:
+    for images, _, _, _, _ in data_loader:
         reals.append(denorm(to_variable(images).data))
         fakes.append(denorm((g(to_variable(images), fake_ids_onehot)[0]).data))
         break
