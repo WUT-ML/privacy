@@ -16,16 +16,18 @@ import os
 image_size = 64
 n_ids = 6
 n_attrs = 7
-n_epochs = 200
+n_epochs = 100
 BATCH_SIZE = 256
+MEAN = [0.2516, 0.1957, 0.1495]
+STD = [0.2174, 0.1772, 0.1569]
 
 # Define image transformation
 dataset_transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize(size=image_size),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.2516, 0.1957, 0.1495],
-                         std=[0.2174, 0.1772, 0.1569])
+    transforms.Normalize(mean=MEAN,
+                         std=STD)
 ])
 
 # Prepare dataset loader
@@ -51,8 +53,20 @@ def to_variable(tensor):
 
 
 def denorm(image):
-    """Convert image range (-1, 1) to (0, 1)."""
-    out = (image + 1) / 2
+    """Apply inverse transformation to noramlization"""
+    std_tensor = torch.FloatTensor(STD)
+    std_tensor.unsqueeze_(0)
+    std_tensor = std_tensor.expand(BATCH_SIZE, -1)
+    std_tensor.unsqueeze_(2)
+    std_tensor.unsqueeze_(3)
+    std_tensor = std_tensor.expand(-1, -1,  image_size, image_size)
+    mean_tensor = torch.FloatTensor(MEAN)
+    mean_tensor.unsqueeze_(0)
+    mean_tensor = mean_tensor.expand(BATCH_SIZE, -1)
+    mean_tensor.unsqueeze_(2)
+    mean_tensor.unsqueeze_(3)
+    mean_tensor - mean_tensor.expand(-1, -1, image_size, image_size)
+    out = torch.add(torch.div(image, std_tensor.cuda()), mean_tensor.cuda())
     return out.clamp(0, 1)
 
 
@@ -70,11 +84,15 @@ d_optimizer = torch.optim.RMSprop(d.parameters(), 0.0002)
 tb_writer = tb.SummaryWriter()
 step = 0
 
+# Train generator GENERATOR_TRAIN_RATIO as aoften as discriminator
+GENERATOR_TRAIN_RATIO = 1
+
+
 # Learning process
 for epoch in range(n_epochs):
     print("Epoch number: ", epoch)
 
-    train_discriminator = True
+    train_generator = GENERATOR_TRAIN_RATIO
 
     # Preapre a minibatch
     for images, id, attr in data_loader:
@@ -89,7 +107,7 @@ for epoch in range(n_epochs):
         attr = to_variable(attr)
 
         # ----------------------TRAIN DISCRIMINATOR----------------------------
-        if(train_discriminator):
+        if(train_generator==GENERATOR_TRAIN_RATIO):
 
             # Train Discriminator on real images
             output_fake, output_id, output_attr = d(images)
@@ -134,11 +152,10 @@ for epoch in range(n_epochs):
             tb_writer.add_scalar('d2_loss', d_loss_id.data[0], step)
             tb_writer.add_scalar('d3_loss', d_loss_attr.data[0], step)
 
-            # Train generator twice as often as discriminator
-            train_discriminator = False
+            train_generator = 0
 
         else:
-            train_discriminator = True
+            train_generator += 1
 
         # ----------------------TRAIN GENERATOR----------------------------
 
@@ -193,9 +210,9 @@ for epoch in range(n_epochs):
 
     # At the end of each epoch generate sample images
     reals, fakes = [], []
-    fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
+    #fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
     fake_ids_onehot = torch.zeros(BATCH_SIZE, n_ids)
-    fake_ids_onehot.scatter_(1, fake_ids, 1)
+    #fake_ids_onehot.scatter_(1, fake_ids, 1)
     fake_ids_onehot = to_variable(fake_ids_onehot)
 
     for images, _, _ in data_loader:
