@@ -17,27 +17,32 @@ class Generator(nn.Module):
 
         # Encoder
         self.conv1 = nn.Conv2d(3, conv_size, kernel, stride)
-        self.conv1_bn = nn.BatchNorm2d(conv_size)
+        self.conv1_bn = nn.BatchNorm2d(conv_size, momentum=0.8)
+        self.dropout1 = nn.Dropout2d(p=0.3)
         self.conv2 = nn.Conv2d(conv_size, conv_size * 2, kernel, stride)
-        self.conv2_bn = nn.BatchNorm2d(conv_size * 2)
+        self.conv2_bn = nn.BatchNorm2d(conv_size * 2, momentum=0.8)
+        self.dropout2 = nn.Dropout2d(p=0.3)
         self.conv3 = nn.Conv2d(conv_size * 2, conv_size * 4, kernel, stride)
-        self.conv3_bn = nn.BatchNorm2d(conv_size * 4)
+        self.conv3_bn = nn.BatchNorm2d(conv_size * 4, momentum=0.8)
+        self.dropout3 = nn.Dropout2d(p=0.3)
         self.conv4 = nn.Conv2d(conv_size * 4, conv_size * 8, kernel, stride)
-        self.conv4_bn = nn.BatchNorm2d(conv_size * 8)
+        self.conv4_bn = nn.BatchNorm2d(conv_size * 8, momentum=0.8)
+        self.dropout4 = nn.Dropout2d(p=0.3)
 
         # Bottleneck (mu and logvar layers)
         # TODO 256 and 134 are valid only for 64x64 images and 6 ids
         self.fc11 = nn.Linear(256, 128)
         self.fc12 = nn.Linear(256, 128)
+        self.fc12_sigmoid = nn.Sigmoid()
         self.fc2 = nn.Linear(134, 2048)
 
         # Decoder
         self.deconv1 = nn.ConvTranspose2d(conv_size * 4, conv_size * 8, kernel, stride, 1)
-        self.deconv1_bn = nn.BatchNorm2d(conv_size * 8)
+        self.deconv1_bn = nn.BatchNorm2d(conv_size * 8, momentum=0.8)
         self.deconv2 = nn.ConvTranspose2d(conv_size * 8, conv_size * 4, kernel, stride, 2)
-        self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
+        self.deconv2_bn = nn.BatchNorm2d(conv_size * 4, momentum=0.8)
         self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride, 2)
-        self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
+        self.deconv3_bn = nn.BatchNorm2d(conv_size * 2, momentum=0.8)
         self.deconv4 = nn.ConvTranspose2d(conv_size * 2, 3, kernel+1, stride, 3)
 
         self.weight_init()
@@ -49,13 +54,13 @@ class Generator(nn.Module):
 
     def encode(self, input):
         """Encode image into latent vector."""
-        c1 = F.leaky_relu(self.conv1_bn(self.conv1(input)), 0.2)
-        c2 = F.leaky_relu(self.conv2_bn(self.conv2(c1)), 0.2)
-        c3 = F.leaky_relu(self.conv3_bn(self.conv3(c2)), 0.2)
-        c4 = F.leaky_relu(self.conv4_bn(self.conv4(c3)), 0.2)
+        c1 = F.leaky_relu(self.dropout1(self.conv1_bn(self.conv1(input))), 0.2)
+        c2 = F.leaky_relu(self.dropout2(self.conv2_bn(self.conv2(c1))), 0.2)
+        c3 = F.leaky_relu(self.dropout3(self.conv3_bn(self.conv3(c2))), 0.2)
+        c4 = F.leaky_relu(self.dropout4(self.conv4_bn(self.conv4(c3))), 0.2)
 
         mu = self.fc11(c4.view(c4.size(0), -1))
-        logvar = self.fc12(c4.view(c4.size(0), -1))
+        logvar = self.fc12_sigmoid(self.fc12(c4.view(c4.size(0), -1)))
         return mu, logvar
 
     def decode(self, z, label):
@@ -93,18 +98,17 @@ class Discriminator(nn.Module):
         self.n_attributes = n_attributes
 
         self.conv1 = nn.Conv2d(3, conv_size, kernel, stride)
-        self.conv1_bn = nn.BatchNorm2d(conv_size)
         self.conv2 = nn.Conv2d(conv_size, conv_size * 2, kernel, stride)
-        self.conv2_bn = nn.BatchNorm2d(conv_size * 2)
         self.conv3 = nn.Conv2d(conv_size * 2, conv_size * 4, kernel, stride)
-        self.conv3_bn = nn.BatchNorm2d(conv_size * 4)
         self.conv4 = nn.Conv2d(conv_size * 4, conv_size * 8, kernel, stride)
-        self.conv4_bn = nn.BatchNorm2d(conv_size * 8)
 
         # TODO 256 is valid only for 64x64 input images
         self.fc1 = nn.Linear(256, 256)
 
+        self.dropout1 = nn.Dropout2d(p=0.5)
+
         self.fc_fake = nn.Linear(256, 1)
+        self.fc_fake_sigmoid = nn.Sigmoid()
         self.fc_identity = nn.Linear(256, self.n_classes)
         self.fc_attribute = nn.Linear(256, self.n_attributes)
 
@@ -120,12 +124,12 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         """Define the computation performed at every call."""
-        c1 = F.leaky_relu(self.conv1_bn(self.conv1(input)), 0.2)
-        c2 = F.leaky_relu(self.conv2_bn(self.conv2(c1)), 0.2)
-        c3 = F.leaky_relu(self.conv3_bn(self.conv3(c2)), 0.2)
-        c4 = F.leaky_relu(self.conv4_bn(self.conv4(c3)), 0.2)
-        discriminator_out_common = F.leaky_relu(self.fc1(c4.view(c4.size(0), -1)), 0.2)
-        discriminator_out_fake = self.fc_fake(discriminator_out_common)
+        c1 = F.leaky_relu(self.conv1(input), 0.2)
+        c2 = F.leaky_relu(self.conv2(c1), 0.2)
+        c3 = F.leaky_relu(self.conv3(c2), 0.2)
+        c4 = F.leaky_relu(self.conv4(c3), 0.2)
+        discriminator_out_common = self.dropout1(F.leaky_relu(self.fc1(c4.view(c4.size(0), -1)), 0.2))
+        discriminator_out_fake = self.fc_fake_sigmoid(self.fc_fake(discriminator_out_common))
         discriminator_out_identity = self.fc_identity(discriminator_out_common)
         discriminator_out_attribute = self.fc_attribute(discriminator_out_common)
 
