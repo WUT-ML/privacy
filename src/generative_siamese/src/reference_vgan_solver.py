@@ -264,7 +264,7 @@ class SiameseVganSolver(object):
             for images, _, _, _, _ in self.data_loader:
                 reals.append(denorm(to_variable(images).data))
                 fakes.append(
-                    denorm((g(to_variable(images), fake_ids_onehot)[0]).data))
+                    denorm((self.generator(to_variable(images), fake_ids_onehot)[0]).data))
                 break
 
             # Write images to tensorboard
