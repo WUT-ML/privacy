@@ -128,7 +128,8 @@ class Discriminator(nn.Module):
         c2 = F.leaky_relu(self.conv2(c1), 0.2)
         c3 = F.leaky_relu(self.conv3(c2), 0.2)
         c4 = F.leaky_relu(self.conv4(c3), 0.2)
-        discriminator_out_common = self.dropout1(F.leaky_relu(self.fc1(c4.view(c4.size(0), -1)), 0.2))
+        discriminator_out_common = self.dropout1(F.leaky_relu(
+                                    self.fc1(c4.view(c4.size(0), -1)), 0.2))
         discriminator_out_fake = self.fc_fake_sigmoid(self.fc_fake(discriminator_out_common))
         discriminator_out_identity = self.fc_identity(discriminator_out_common)
         discriminator_out_attribute = self.fc_attribute(discriminator_out_common)
