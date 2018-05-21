@@ -138,13 +138,12 @@ class SiameseVganSolver(object):
                         to_variable(torch.zeros(batch_size)))
 
                     # Combine losses
-                    d_loss = (1.0 - self.siam_factor/100.0) *
-                    (0.125 * d_loss_real +
-                     0.5 * d_loss_id +
-                     0.25 * d_loss_attr +
-                     0.125 * d_loss_fake) +
-                    (self.siam_factor/100.0) *
-                    (0.5 * d_siam_real + 0.5 * d_siam_fake)
+                    d_loss = (1.0 - self.siam_factor/100.0) \
+                        * (0.125 * d_loss_real +
+                           0.5 * d_loss_id +
+                           0.25 * d_loss_attr +
+                           0.125 * d_loss_fake) \
+                        + (self.siam_factor/100.0) * (0.5 * d_siam_real + 0.5 * d_siam_fake)
 
                     # Backpropagation for discriminator
                     self.discriminator.zero_grad()
@@ -214,12 +213,12 @@ class SiameseVganSolver(object):
                     to_variable(torch.ones(batch_size)))
 
                 # Combine losses
-                g_loss = (1.0 - self.siam_factor/100.0) *
-                (0.108 * g_loss_fake +
-                 0.6 * g_loss_id +
-                 0.29 * g_loss_attr +
-                 0.002 * kld_loss) +
-                self.siam_factor / 100.0 * g_siam
+                g_loss = (1.0 - self.siam_factor/100.0) \
+                    * (0.108 * g_loss_fake +
+                       0.6 * g_loss_id +
+                       0.29 * g_loss_attr +
+                       0.002 * kld_loss) \
+                    + (self.siam_factor / 100.0) * g_siam
 
                 # Backpropagation for generator
                 self.generator.zero_grad()
