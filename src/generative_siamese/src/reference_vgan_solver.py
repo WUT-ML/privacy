@@ -33,6 +33,7 @@ class SiameseVganSolver(object):
         self.siam_factor = config.siam_factor
 
         self.data_loader = data_loader
+        self.model_path = config.model_path
 
         self.build_model()
 
@@ -108,9 +109,6 @@ class SiameseVganSolver(object):
 
                     # Train Discriminator to recognize attributes
                     d_loss_attr = F.cross_entropy(output_attr, attr.long())
-                    # attr_accuracy = (output_attr.max(1)[1] - attr.long())
-                    # .nonzero().size(0)/BATCH_SIZE
-                    # tb_writer.add_scalar('discriminator/attr_accuracy', attr_accuracy, step)
 
                     # Train Discriminator to recognize fake images as fake
                     batch_size = images0.size(0)
@@ -203,6 +201,14 @@ class SiameseVganSolver(object):
                 # Train Generator to fool attr Discriminator
                 g_loss_attr = F.cross_entropy(output_attr, attr.long())
 
+                # Save mini-batch accuracy rate
+                try:
+                    attr_accuracy = (output_attr.max(1)[1] - attr.long()).nonzero().size(0)
+                    attr_accuracy = attr_accuracy / self.batch_size
+                    tb_writer.add_scalar('discriminator/attr_accuracy', attr_accuracy, step)
+                except RuntimeError:
+                    tb_writer.add_scalar('discriminator/attr_accuracy', 0.0, step)
+
                 # Compute Kullback-Leibler divergence
                 kld_loss = -0.5 * \
                     torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
@@ -274,6 +280,41 @@ class SiameseVganSolver(object):
             tb_writer.add_image('GAN/Generated images', fake_previews, step)
 
         # Close tensorboard
+        tb_writer.close()
+
+    def sample(self):
+        """Generate sample dataset."""
+        # Load trained parameters (generator)
+        g_path = os.path.join(self.model_path,
+                              'generator-%d-%d.pkl' % (self.n_epochs, self.siam_factor))
+        self.generator.load_state_dict(torch.load(g_path))
+        self.generator.eval()
+
+        tb_writer = tb.SummaryWriter()
+        step = 0
+
+        # Generate sample images
+        for images, ids, _, _, _ in self.data_loader:
+
+            # Get real images
+            real_images = denorm(to_variable(images).data)
+
+            # Draw a random id, different from the real one
+            fake_ids = 1 + torch.LongTensor(self.batch_size).random_() % (self.n_ids - 1)
+            fake_ids = (fake_ids + ids) % self.n_ids
+
+            # Encode id to one-hot vector
+            fake_ids_onehot = torch.zeros(self.batch_size, self.n_ids)
+            fake_ids_onehot.scatter_(1, fake_ids.unsqueeze(1), 1)
+
+            # Generate fake images
+            fake_images, _, _ = self.generator(to_variable(images), to_variable(fake_ids_onehot))
+            fake_images = denorm(fake_images.data)
+
+            tb_writer.add_image("Real", real_images, step)
+            tb_writer.add_image("Fake", fake_images, step)
+            step = step + 1
+
         tb_writer.close()
 
 

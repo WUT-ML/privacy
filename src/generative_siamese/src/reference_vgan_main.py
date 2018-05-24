@@ -34,12 +34,12 @@ def main():
 
     if config.mode == 'train':
         # Train model
-        try:
-            solver = SiameseVganSolver(config, data_loader)
-            solver.train()
-        except Exception as ex:
-            print(type(ex).__name__)
-            print(ex.args)
+        solver = SiameseVganSolver(config, data_loader)
+        solver.train()
+    elif config.mode == 'sample':
+        # Generate sample dataset
+        solver = SiameseVganSolver(config, data_loader)
+        solver.sample()
 
 
 if __name__ == '__main__':
@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--siam_factor', type=int, default=0)
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--image_path', type=str, default="../../../../FERG_DB_256/")
+    parser.add_argument('--model_path', type=str, default="../models/faces/")
     parser.add_argument('--n_epochs', type=int, default=100)
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--batch_size', type=int, default=256)
