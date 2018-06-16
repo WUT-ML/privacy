@@ -34,7 +34,7 @@ def main():
     # Train and sample the images
     if config.mode == 'train':
 
-        dataset = TripletToyDataset(transform=dataset_transform, path=config.image_path)
+        dataset = TrFingerprints(transform=dataset_transform, path=config.image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,
@@ -47,7 +47,7 @@ def main():
         solver.train()
     elif config.mode == 'generate':
 
-        dataset = ToyDataset(transform=dataset_transform, path=config.image_path)
+        dataset = Fingerprints(transform=dataset_transform, path=config.image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,
@@ -67,11 +67,10 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--model_path', type=str, default='../models')
     parser.add_argument('--generate_path', type=str, default='../samples')
-    parser.add_argument('--image_path', type=str, default='../../../data/" \
-                        "NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt')
-    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--image_path', type=str, default='../../../data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/')
+    parser.add_argument('--num_epochs', type=int, default=1)
     parser.add_argument('--max_L2', type=float, default=5000.0)
-    parser.add_argument('--jobs', type=int, default=1)
+    parser.add_argument('--jobs', type=int, default=100)
     parser.add_argument('--batch', type=int, default=64)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=False)

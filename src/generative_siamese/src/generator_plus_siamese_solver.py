@@ -11,6 +11,7 @@ import torchvision
 from tqdm import tqdm
 from generator_plus_siamese_model import Generator, SiameseDiscriminator, DistanceBasedLoss
 from generator_plus_siamese_model import distanceL2
+from pytorch_ssim import SSIM
 
 
 class SiameseGanSolver(object):
@@ -46,6 +47,7 @@ class SiameseGanSolver(object):
         self.generator = Generator(self.g_conv_dim)
         self.discriminator = SiameseDiscriminator(self.image_size)
         self.distance_based_loss = DistanceBasedLoss(2.0)
+        self.ssim_loss = SSIM()
 
         self.g_optimizer = torch.optim.Adam(
             self.generator.parameters(), self.learning_rate, [self.beta1, self.beta2])
@@ -97,8 +99,8 @@ class SiameseGanSolver(object):
                 # Discriminator wants to minimize Euclidean distance between
                 # original & privatized versions, hence label = 0
                 d_fake_loss = self.distance_based_loss(output0, output1, 0)
-                distance = distanceL2(privatized_imgs, images0)
-                d_fake_loss += torch.clamp(distance - self.max_L2, min=0.0)
+                distance = 1.0 - self.ssim_loss(privatized_imgs, images0)
+                d_fake_loss += distance
 
                 # Backpropagation
                 self.distance_based_loss.zero_grad()
@@ -113,8 +115,8 @@ class SiameseGanSolver(object):
                 privatized_imgs = self.generator(images0)
                 output0, output1 = self.discriminator(images0, privatized_imgs)
                 g_loss = self.distance_based_loss(output0, output1, 1)
-                distance = distanceL2(privatized_imgs, images0)
-                g_loss += torch.clamp(distance - self.max_L2, min=0.0)
+                distance = 1.0 - self.ssim_loss(privatized_imgs, images0)
+                g_loss += distance
 
                 # Backpropagation
                 self.distance_based_loss.zero_grad()
@@ -136,6 +138,9 @@ class SiameseGanSolver(object):
                                               d_fake_loss.data[0], step)
                     self.tb_writer.add_scalar('phase0/generator_loss',
                                               g_loss.data[0], step)
+                    self.tb_writer.add_scalar('phase0/distance_loss',
+                                              distance.data[0], step)
+
                     step += 1
 
             # Monitor training after each epoch
