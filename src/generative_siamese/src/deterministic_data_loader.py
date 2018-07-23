@@ -13,9 +13,11 @@ from torch.utils.data import Dataset
 
 
 class TripletFERG(Dataset):
-    """Quasi-deterministic triplet data loader class for FERG dataset."""
-    """It returns pairs of images with corresponding label (0 or 1)."""
-    """Label 0 if images come from the same person, 1 otherwise."""
+    """Quasi-deterministic triplet data loader class for FERG dataset.
+
+    It returns pairs of images with corresponding label (0 or 1).
+    Label 0 if images come from the same person, 1 otherwise.
+    """
 
     def __init__(self, path, transform):
         """Construct data loader."""
@@ -25,7 +27,8 @@ class TripletFERG(Dataset):
         self.SIZE = 10000
         self.N_IDS = 6
         self.filenames = pd.read_csv(os.path.join(path, "images.csv"), header=None)
-        self.range_dict = {0: (0, 7557), 1: (7558, 17560), 2: (17561, 25139), 3: (25140, 36409), 4: (36410, 45010), 5: (45011, 55765)}
+        self.range_dict = {0: (0, 7557), 1: (7558, 17560), 2: (17561, 25139),
+                           3: (25140, 36409), 4: (36410, 45010), 5: (45011, 55765)}
         random.seed(52092)
 
     def __len__(self):
@@ -33,7 +36,7 @@ class TripletFERG(Dataset):
         return self.SIZE * 2
 
     def get_random_index(self, id):
-        """For a given person represented by id get a random image represented by index"""
+        """For a given person represented by id get a random image represented by index."""
         range = self.range_dict[id]
         return random.randint(*range)
 
@@ -46,9 +49,9 @@ class TripletFERG(Dataset):
         img_name = self.filenames.iloc[index, 0]
         img_path = os.path.join(self.root_path, img_name)
         img = scipy.misc.imread(img_path, mode="RGBA")
-        img[img[:,:,3]==0] = 255
+        img[img[:, :, 3] == 0] = 255
 
-        return img[:,:,0:3]
+        return img[:, :, 0:3]
 
     def __getitem__(self, index):
         """Access item from dataset."""
@@ -102,9 +105,9 @@ class FERGDataset(Dataset):
         img_path = os.path.join(self.root_path, img_name)
         rel_path = os.path.relpath(img_path, self.root_path)
         img = scipy.misc.imread(img_path, mode="RGBA")
-        img[img[:,:,3]==0] = 255
+        img[img[:, :, 3] == 0] = 255
 
-        return img[:,:,0:3], rel_path
+        return img[:, :, 0:3], rel_path
 
     def __getitem__(self, index):
         """Access item from dataset."""

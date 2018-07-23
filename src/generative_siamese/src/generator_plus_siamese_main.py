@@ -7,8 +7,7 @@ import torch
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-
-from deterministic_data_loader import TrFingerprints, Fingerprints, TripletToyDataset, ToyDataset, TripletFERG, FERGDataset
+from deterministic_data_loader import TripletFERG, FERGDataset
 from generator_plus_siamese_solver import SiameseGanSolver
 
 
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--model_path', type=str, default='../models')
     parser.add_argument('--generate_path', type=str, default='../samples')
-    parser.add_argument('--image_path', type=str, default='../../../data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/')
+    parser.add_argument('--image_path', type=str)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--distance_weight', type=float, default=1.0)
     parser.add_argument('--jobs', type=int, default=4)

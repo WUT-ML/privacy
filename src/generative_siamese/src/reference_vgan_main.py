@@ -53,7 +53,7 @@ def to_variable(tensor):
 
 
 def denorm(image):
-    """Apply inverse transformation to noramlization"""
+    """Apply inverse transformation to noramlization."""
     std_tensor = torch.FloatTensor(STD)
     std_tensor.unsqueeze_(0)
     std_tensor = std_tensor.expand(BATCH_SIZE, -1)
@@ -107,7 +107,7 @@ for epoch in range(n_epochs):
         attr = to_variable(attr)
 
         # ----------------------TRAIN DISCRIMINATOR----------------------------
-        if(train_generator==GENERATOR_TRAIN_RATIO):
+        if(train_generator == GENERATOR_TRAIN_RATIO):
 
             # Train Discriminator on real images
             output_fake, output_id, output_attr = d(images)
@@ -210,9 +210,7 @@ for epoch in range(n_epochs):
 
     # At the end of each epoch generate sample images
     reals, fakes = [], []
-    #fake_ids = torch.LongTensor(BATCH_SIZE, 1).random_() % n_ids
     fake_ids_onehot = torch.zeros(BATCH_SIZE, n_ids)
-    #fake_ids_onehot.scatter_(1, fake_ids, 1)
     fake_ids_onehot = to_variable(fake_ids_onehot)
 
     for images, _, _ in data_loader:

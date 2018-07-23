@@ -69,14 +69,14 @@ class SiameseGanSolver(object):
             step = 0
 
         # Training
-        #tqdm.write('\nStart minimax training of Generator and Discriminator')
-        #epoch_monitor = tqdm(total=self.num_epochs)
-        #epoch_monitor.set_description('Epoch')
+        # tqdm.write('\nStart minimax training of Generator and Discriminator')
+        # epoch_monitor = tqdm(total=self.num_epochs)
+        # epoch_monitor.set_description('Epoch')
 
         for epoch in range(self.num_epochs):
             print(str(epoch) + " " + str(datetime.now()))
-            #batch_monitor = tqdm(total=len(self.data_loader))
-            #batch_monitor.set_description('Batch')
+            # batch_monitor = tqdm(total=len(self.data_loader))
+            # batch_monitor.set_description('Batch')
 
             for label, images0, images1 in self.data_loader:
                 images0 = to_variable(images0)
@@ -127,10 +127,10 @@ class SiameseGanSolver(object):
                 g_loss.backward()
                 self.g_optimizer.step()
 
-                #batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0],
-                                          #d_fake_loss=d_fake_loss.data[0],
-                                          #g_loss=g_loss.data[0])
-                #batch_monitor.update()
+                # batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0],
+                # d_fake_loss=d_fake_loss.data[0],
+                # g_loss=g_loss.data[0])
+                # batch_monitor.update()
 
                 # Write losses to tensorboard
                 if self.tensorboard:
@@ -149,10 +149,10 @@ class SiameseGanSolver(object):
             if self.tensorboard:
                 self._monitor_phase_0(self.tb_writer, step)
 
-            #batch_monitor.close()
-            #epoch_monitor.update()
+            # batch_monitor.close()
+            # epoch_monitor.update()
 
-        #epoch_monitor.close()
+        # epoch_monitor.close()
 
         # At the end save generator and discriminator to files
         g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
@@ -160,7 +160,7 @@ class SiameseGanSolver(object):
         d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % (epoch+1))
         torch.save(self.discriminator.state_dict(), d_path)
 
-        #tqdm.write('\n\nTraining completed.')
+        # tqdm.write('\n\nTraining completed.')
 
         if self.tensorboard:
             self.tb_writer.close()
