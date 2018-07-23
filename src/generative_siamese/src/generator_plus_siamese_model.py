@@ -14,10 +14,9 @@ class Generator(nn.Module):
     def __init__(self, conv_size, kernel=4, stride=2, pad=1):
         """Initialize generator."""
         super(Generator, self).__init__()
-        self.NOISE_FACTOR = 0.01
 
         # Unet encoder
-        self.conv1 = nn.Conv2d(1, conv_size, kernel, stride, pad)
+        self.conv1 = nn.Conv2d(3, conv_size, kernel, stride, pad)
         self.conv2 = nn.Conv2d(conv_size, conv_size * 2, kernel, stride, pad)
         self.conv2_bn = nn.BatchNorm2d(conv_size * 2)
         self.conv3 = nn.Conv2d(conv_size * 2, conv_size * 4, kernel, stride, pad)
@@ -29,13 +28,13 @@ class Generator(nn.Module):
         # Unet decoder
         self.deconv1 = nn.ConvTranspose2d(conv_size * 8, conv_size * 8, kernel, stride, pad)
         self.deconv1_bn = nn.BatchNorm2d(conv_size * 8)
-        self.deconv2 = nn.ConvTranspose2d(conv_size * 8 * 2, conv_size * 4, kernel, stride, pad)
+        self.deconv2 = nn.ConvTranspose2d(conv_size * 8, conv_size * 4, kernel, stride, pad)
         self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
-        self.deconv3 = nn.ConvTranspose2d(conv_size * 4 * 2, conv_size * 2, kernel, stride, pad)
+        self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride, pad)
         self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
-        self.deconv4 = nn.ConvTranspose2d(conv_size * 2 * 2, conv_size, kernel, stride, pad)
+        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, conv_size, kernel, stride, pad)
         self.deconv4_bn = nn.BatchNorm2d(conv_size)
-        self.deconv5 = nn.ConvTranspose2d(conv_size * 2, 1, kernel, stride, pad)
+        self.deconv5 = nn.ConvTranspose2d(conv_size, 3, kernel, stride, pad)
 
     def weight_init(self, mean, std):
         """Initilize weights."""
@@ -50,17 +49,10 @@ class Generator(nn.Module):
         c4 = self.conv4_bn(self.conv4(F.leaky_relu(c3, 0.1)))
         c5 = self.conv5(F.leaky_relu(c4, 0.1))
 
-        # Add noise
-        c5 += Variable((self.NOISE_FACTOR * (-0.5 + torch.rand(c5.size()))).cuda())
-
         d1 = F.dropout(self.deconv1_bn(self.deconv1(F.leaky_relu(c5, 0.1))), 0.5, training=True)
-        d1 = torch.cat([d1, c4], 1)
         d2 = F.dropout(self.deconv2_bn(self.deconv2(F.leaky_relu(d1, 0.1))), 0.5, training=True)
-        d2 = torch.cat([d2, c3], 1)
         d3 = F.dropout(self.deconv3_bn(self.deconv3(F.leaky_relu(d2, 0.1))), 0.5, training=True)
-        d3 = torch.cat([d3, c2], 1)
         d4 = self.deconv4_bn(self.deconv4(F.leaky_relu(d3, 0.1)))
-        d4 = torch.cat([d4, c1], 1)
         d5 = self.deconv5(F.leaky_relu(d4, 0.1))
         out = F.tanh(d5)
 
@@ -82,7 +74,7 @@ class SiameseDiscriminator(nn.Module):
         super(SiameseDiscriminator, self).__init__()
         self.cnn1 = nn.Sequential(
             nn.ReflectionPad2d(1),
-            nn.Conv2d(1, 4, kernel_size=3),
+            nn.Conv2d(3, 4, kernel_size=3),
             nn.LeakyReLU(0.1, inplace=True),
             nn.BatchNorm2d(4),
             nn.Dropout2d(p=.2),

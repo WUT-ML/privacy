@@ -12,6 +12,7 @@ from tqdm import tqdm
 from generator_plus_siamese_model import Generator, SiameseDiscriminator, DistanceBasedLoss
 from generator_plus_siamese_model import distanceL2
 from pytorch_ssim import SSIM
+from datetime import datetime
 
 
 class SiameseGanSolver(object):
@@ -33,7 +34,7 @@ class SiameseGanSolver(object):
         self.learning_rate = 0.0001
         self.image_size = config.image_size
         self.num_epochs = config.num_epochs
-        self.max_L2 = config.max_L2
+        self.distance_weight = config.distance_weight
 
         self.data_loader = data_loader
         self.generate_path = config.generate_path
@@ -68,13 +69,14 @@ class SiameseGanSolver(object):
             step = 0
 
         # Training
-        tqdm.write('\nStart minimax training of Generator and Discriminator')
-        epoch_monitor = tqdm(total=self.num_epochs)
-        epoch_monitor.set_description('Epoch')
+        #tqdm.write('\nStart minimax training of Generator and Discriminator')
+        #epoch_monitor = tqdm(total=self.num_epochs)
+        #epoch_monitor.set_description('Epoch')
 
         for epoch in range(self.num_epochs):
-            batch_monitor = tqdm(total=len(self.data_loader))
-            batch_monitor.set_description('Batch')
+            print(str(epoch) + " " + str(datetime.now()))
+            #batch_monitor = tqdm(total=len(self.data_loader))
+            #batch_monitor.set_description('Batch')
 
             for label, images0, images1 in self.data_loader:
                 images0 = to_variable(images0)
@@ -100,7 +102,7 @@ class SiameseGanSolver(object):
                 # original & privatized versions, hence label = 0
                 d_fake_loss = self.distance_based_loss(output0, output1, 0)
                 distance = 1.0 - self.ssim_loss(privatized_imgs, images0)
-                d_fake_loss += distance
+                d_fake_loss += self.distance_weight * distance
 
                 # Backpropagation
                 self.distance_based_loss.zero_grad()
@@ -116,7 +118,7 @@ class SiameseGanSolver(object):
                 output0, output1 = self.discriminator(images0, privatized_imgs)
                 g_loss = self.distance_based_loss(output0, output1, 1)
                 distance = 1.0 - self.ssim_loss(privatized_imgs, images0)
-                g_loss += distance
+                g_loss += self.distance_weight * distance
 
                 # Backpropagation
                 self.distance_based_loss.zero_grad()
@@ -125,10 +127,10 @@ class SiameseGanSolver(object):
                 g_loss.backward()
                 self.g_optimizer.step()
 
-                batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0],
-                                          d_fake_loss=d_fake_loss.data[0],
-                                          g_loss=g_loss.data[0])
-                batch_monitor.update()
+                #batch_monitor.set_postfix(d_real_loss=d_real_loss.data[0],
+                                          #d_fake_loss=d_fake_loss.data[0],
+                                          #g_loss=g_loss.data[0])
+                #batch_monitor.update()
 
                 # Write losses to tensorboard
                 if self.tensorboard:
@@ -147,10 +149,10 @@ class SiameseGanSolver(object):
             if self.tensorboard:
                 self._monitor_phase_0(self.tb_writer, step)
 
-            batch_monitor.close()
-            epoch_monitor.update()
+            #batch_monitor.close()
+            #epoch_monitor.update()
 
-        epoch_monitor.close()
+        #epoch_monitor.close()
 
         # At the end save generator and discriminator to files
         g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
@@ -158,7 +160,7 @@ class SiameseGanSolver(object):
         d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % (epoch+1))
         torch.save(self.discriminator.state_dict(), d_path)
 
-        tqdm.write('\n\nTraining completed.')
+        #tqdm.write('\n\nTraining completed.')
 
         if self.tensorboard:
             self.tb_writer.close()
@@ -175,7 +177,8 @@ class SiameseGanSolver(object):
             label = to_variable(label)
 
             # Predict label = 1 if outputs are dissimilar (distance > margin)
-            output0, output1 = self.discriminator(images0, images1)
+            privatized_images0 = self.generator(images0)
+            output0, output1 = self.discriminator(privatized_images0, images1)
             predictions = self.distance_based_loss.predict(output0, output1)
             predictions = predictions.type(label.data.type())
 
@@ -215,6 +218,8 @@ class SiameseGanSolver(object):
         for relative_path, image in self.data_loader:
             fake_image = self.generator(to_variable(image))
             fake_path = os.path.join(self.generate_path, relative_path[0])
+            if not os.path.exists(os.path.dirname(fake_path)):
+                os.makedirs(os.path.dirname(fake_path))
             torchvision.utils.save_image(denorm(fake_image.data), fake_path, nrow=1)
 
 
