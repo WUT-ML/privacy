@@ -7,7 +7,7 @@ import torch
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from deterministic_data_loader import TripletFERG, FERGDataset
+from deterministic_data_loader import TripletCelebA, TripletFERG, FERGDataset
 from generator_plus_siamese_solver import SiameseGanSolver
 
 
@@ -20,7 +20,7 @@ def main():
     # Load and trasnform dataset
     dataset_transform = transforms.Compose([
         transforms.ToPILImage(),
-        transforms.Resize(size=config.image_size),
+        transforms.Resize(size=(config.image_size, config.image_size)),
         transforms.ToTensor(),
     ])
 
@@ -33,7 +33,7 @@ def main():
     # Train and sample the images
     if config.mode == 'train':
 
-        dataset = TripletFERG(transform=dataset_transform, path=config.image_path)
+        dataset = TripletCelebA(transform=dataset_transform, path=config.image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset,
@@ -41,9 +41,11 @@ def main():
                                  num_workers=config.jobs,
                                  shuffle=True,
                                  drop_last=False)
+
         # Train neural network
         solver = SiameseGanSolver(config, data_loader)
         solver.train()
+
     elif config.mode == 'generate':
 
         dataset = FERGDataset(transform=dataset_transform, path=config.image_path)
@@ -67,10 +69,10 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default='../models')
     parser.add_argument('--generate_path', type=str, default='../samples')
     parser.add_argument('--image_path', type=str)
-    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--num_epochs', type=int, default=340)
     parser.add_argument('--distance_weight', type=float, default=1.0)
     parser.add_argument('--jobs', type=int, default=4)
-    parser.add_argument('--batch', type=int, default=20)
+    parser.add_argument('--batch', type=int, default=128)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=False)
 

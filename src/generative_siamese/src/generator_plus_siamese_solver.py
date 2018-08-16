@@ -149,23 +149,18 @@ class SiameseGanSolver(object):
             if self.tensorboard:
                 self._monitor_phase_0(self.tb_writer, step)
 
-            # batch_monitor.close()
-            # epoch_monitor.update()
 
-        # epoch_monitor.close()
-
-        # At the end save generator and discriminator to files
-        g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
-        torch.save(self.generator.state_dict(), g_path)
-        d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % (epoch+1))
-        torch.save(self.discriminator.state_dict(), d_path)
-
-        # tqdm.write('\n\nTraining completed.')
+            # At the end save generator and discriminator to files
+            if(epoch % 10 == 0):
+                g_path = os.path.join(self.model_path, 'generator-%d.pkl' % (epoch+1))
+                torch.save(self.generator.state_dict(), g_path)
+                d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % (epoch+1))
+                torch.save(self.discriminator.state_dict(), d_path)
 
         if self.tensorboard:
             self.tb_writer.close()
 
-    def _monitor_phase_0(self, writer, step, n_images=5):
+    def _monitor_phase_0(self, writer, step, n_images=10):
         """Monitor discriminator's accuracy, generate preview images of generator."""
         # Measure accuracy of identity verification by discriminator
         correct_pairs = 0
