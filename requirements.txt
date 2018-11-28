@@ -1,7 +1,12 @@
+scikit-learn
+pytorch_ssim
+requests
+scipy
+numpy
+pandas
 http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp35-cp35m-linux_x86_64.whl; python_version < '3.6'
 http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl; python_version >= '3.6'
 torchvision
-luigi
-tqdm
 tensorflow
 tensorboardX
+gdown

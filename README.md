@@ -9,14 +9,16 @@
 
 ## Overview
 
-TBD
-
+This repository contains code for reproducing the experiments with a Generative Adversarial Privatizer
+, based on the [Siamese Generative Adversarial Privatizer for Biometric Data](https://arxiv.org/pdf/1804.08757.pdf).
+Note that the NIST Special Database 4 (FIGS), of the fingerprints,
+has been [withdrawn from public use](https://www.nist.gov/srd/nist-special-database-4),
+thus it is not used in this repository.
 
 ## Requirements
 
 ###### • Python 3.5
 ###### • PyTorch 0.3 & torchvision
-###### • luigi
 
 
 ## Steps
@@ -29,19 +31,8 @@ pip install -r requirements.txt
 
 ###### 1. Dataset preparation
 
-```bash
-python ./run.py Dataset --local-scheduler
-```
-
-Download & extract the [NIST FIGS database](https://www.nist.gov/srd/nist-special-database-4) to `data/` folder.
-
-Images are contained in `data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/figs_*` folders, 250 pairs in each.
-
-File naming is `{instance}{ID}_{finger}.png`, where:
-
-- `{instance}` - either `f` or `s` for first and second instance,
-- `{ID}` - person identifier,
-- `{finger}` - finger identifier `[01-10]`.
+Two datasets, FERG and CelebA can be downloaded and extracted by only setting `--dataset` argument to either "FERG" or "CelebA".
+For other datasets new dataloaders have to be written.
 
 ###### 2. Siamese GAN training
 
@@ -51,10 +42,8 @@ Run in background/separate session:
 tensorboard --logdir runs
 ```
 
-Train model with TensorBoard visualizations:
+Train model on FERG dataset with TensorBoard visualizations:
 
 ```bash
-python src/generative_siamese/src/generator_plus_siamese_main.py --image_path=data/NISTSpecialDatabase4GrayScaleImagesofFIGS/sd04/png_txt/ --model_path=results/models --tensorboard  
+python src/generative_siamese/generator_plus_siamese_main.py --tensorboard  
 ```
-
-This step will be superseded by a Luigi task in the future.

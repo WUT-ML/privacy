@@ -42,7 +42,7 @@ htmlcov/
 .tox/
 .coverage
 .coverage.*
-.cache
+.cacheg
 nosetests.xml
 coverage.xml
 *.cover
@@ -161,3 +161,4 @@ fabric.properties
 
 # TensorBoard logs
 /runs/
+/temp/
