@@ -81,9 +81,11 @@ def main():
     elif config.mode == 'evaluate_privacy':
 
         if config.dataset == "FERG":
-            dataset = TripletFERG(transform=dataset_transform, path=image_path, is_evaluation=True)
+            dataset = TripletFERG(
+                transform=dataset_transform, path=image_path, is_evaluation=True)
         elif config.dataset == "CelebA":
-            dataset = TripletCelebA(transform=dataset_transform, path=image_path, is_evaluation=True)
+            dataset = TripletCelebA(
+                transform=dataset_transform, path=image_path, is_evaluation=True)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset, batch_size=config.batch, num_workers=config.jobs,

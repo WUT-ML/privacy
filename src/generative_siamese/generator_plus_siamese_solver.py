@@ -203,7 +203,7 @@ class SiameseGanSolver(object):
             torchvision.utils.save_image(denorm(fake_image.data), fake_path, nrow=1)
 
     def check_discriminator_accuracy(self):
-        """Measure discriminator's accuracy"""
+        """Measure discriminator's accuracy."""
         # Measure accuracy of identity verification by discriminator
         correct_pairs = 0
         total_pairs = 0
