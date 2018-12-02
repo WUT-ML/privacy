@@ -12,11 +12,11 @@ from torch.utils.data import Dataset
 class TripletCelebA(Dataset):
     """Quasi-deterministic triplet data loader class for CelebA dataset."""
 
-    def __init__(self, path, transform, is_training=True):
+    def __init__(self, path, transform, is_evaluation=False):
         """Construct data loader."""
         self.dataset_path = os.path.join(path, "CelebA_unzipped", "img_align_celeba")
         self.transform = transform
-        if is_training:
+        if is_evaluation:
             self.random = np.random.RandomState(seed=20180725)
             random.seed(70049)
         else:
