@@ -12,16 +12,20 @@ from torch.utils.data import Dataset
 class TripletCelebA(Dataset):
     """Quasi-deterministic triplet data loader class for CelebA dataset."""
 
-    def __init__(self, path, transform):
+    def __init__(self, path, transform, is_training=True):
         """Construct data loader."""
         self.dataset_path = os.path.join(path, "CelebA_unzipped", "img_align_celeba")
         self.transform = transform
-        self.random = np.random.RandomState(seed=20180725)
+        if is_training:
+            self.random = np.random.RandomState(seed=20180725)
+            random.seed(70049)
+        else:
+            self.random = np.random.RandomState(seed=51729261)
+            random.seed(12345)
         self.SIZE = 10000
         self.N_IDS = 10177
         self.filenames = pd.read_csv(
             os.path.join(path, "ids.txt"), header=None, sep=' ')
-        random.seed(70049)
 
     def __len__(self):
         """Return length of dataset."""
@@ -76,16 +80,20 @@ class TripletFERG(Dataset):
     Label 0 if images come from the same person, 1 otherwise.
     """
 
-    def __init__(self, path, transform):
+    def __init__(self, path, transform, is_evaluation=False):
         """Construct data loader."""
         self.transform = transform
-        self.random = np.random.RandomState(seed=20180124)
+        if is_evaluation:
+            self.random = np.random.RandomState(seed=20180124)
+            random.seed(52092)
+        else:
+            self.random = np.random.RandomState(seed=51729261)
+            random.seed(12345)
         self.SIZE = 10000
         self.N_IDS = 6
         self.filenames = pd.read_csv(os.path.join(path, "images.csv"), header=None)
         self.range_dict = {0: (0, 7557), 1: (7558, 17560), 2: (17561, 25139),
                            3: (25140, 36409), 4: (36410, 45010), 5: (45011, 55765)}
-        random.seed(52092)
 
     def __len__(self):
         """Return length of dataset."""

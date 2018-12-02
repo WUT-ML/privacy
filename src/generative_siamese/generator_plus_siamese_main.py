@@ -27,8 +27,8 @@ def main():
         transforms.ToTensor(),
     ])
 
-    print("If an error occurred while downloading or unzipping the dataset,"
-          "you might have to remove the directory with faulty files: data/{dataset}")
+    # If an error occurred while downloading or unzipping the dataset,
+    # you might have to remove the directory with faulty files: data/{dataset}
 
     image_path = os.path.join("data", config.dataset)
     # Create directories if not exist
@@ -77,6 +77,21 @@ def main():
         # Generate images
         solver = SiameseGanSolver(config, data_loader)
         solver.generate()
+
+    elif config.mode == 'evaluate_privacy':
+
+        if config.dataset == "FERG":
+            dataset = TripletFERG(transform=dataset_transform, path=image_path, is_evaluation=True)
+        elif config.dataset == "CelebA":
+            dataset = TripletCelebA(transform=dataset_transform, path=image_path, is_evaluation=True)
+
+        # Prepare data loader for dataset
+        data_loader = DataLoader(dataset=dataset, batch_size=config.batch, num_workers=config.jobs,
+                                 shuffle=True)
+
+        # Generate images
+        solver = SiameseGanSolver(config, data_loader)
+        solver.check_discriminator_accuracy()
 
 
 if __name__ == '__main__':

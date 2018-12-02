@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Utility methods used for loading the CelebA dataset."""
+"""Utility methods used for loading and evaluating the CelebA dataset."""
 import os
 from zipfile import ZipFile
 import gdown

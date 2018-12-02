@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Utility methods used for loading the FERG dataset."""
+"""Utility methods used for loading and evaluating the FERG dataset."""
 import requests
 import os
 from zipfile import ZipFile
