@@ -196,7 +196,8 @@ class CelebADataset(Dataset):
         assert 0 <= index < self.N_IMAGES
 
         # Get a random image of a person
-        img_path = os.path.join(self.path, "CelebA_unzipped", "img_align_celeba", self.filenames.iloc[index, 0])
+        img_path = os.path.join(
+            self.path, "CelebA_unzipped", "img_align_celeba", self.filenames.iloc[index, 0])
         img = scipy.misc.imread(img_path, mode="RGBA")
         img[img[:, :, 3] == 0] = 255
 
