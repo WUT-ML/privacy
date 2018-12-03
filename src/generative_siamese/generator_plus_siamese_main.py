@@ -103,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default='')
     parser.add_argument('--generate_path', type=str, default='')
     parser.add_argument('--dataset', type=str, default='CelebA')
-    parser.add_argument('--num_epochs', type=int, default=80)
+    parser.add_argument('--num_epochs', type=int)
     parser.add_argument('--distance_weight', type=float, default=1.0)
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--batch', type=int, default=128)
@@ -117,7 +117,9 @@ if __name__ == '__main__':
     if config.generate_path == '':
         config.generate_path = os.path.join(
             'results', config.dataset, 'samples', str(config.distance_weight))
-    if config.dataset == 'CelebA' and config.num_epochs == 80:
+    if config.dataset == 'CelebA' and config.num_epochs is None:
         config.num_epochs = 340
+    if config.dataset == 'FERG' and config.num_epochs is None:
+        config.num_epochs = 80
 
     main()
