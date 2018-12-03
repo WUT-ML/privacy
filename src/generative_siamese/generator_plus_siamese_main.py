@@ -8,7 +8,7 @@ import torch
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from deterministic_data_loader import TripletFERG, FERGDataset, TripletCelebA
+from deterministic_data_loader import TripletFERG, FERGDataset, TripletCelebA, CelebADataset
 from generator_plus_siamese_solver import SiameseGanSolver
 import FERGUtils
 import CelebAUtils
@@ -68,8 +68,7 @@ def main():
         if config.dataset == "FERG":
             dataset = FERGDataset(transform=dataset_transform, path=image_path)
         elif config.dataset == "CelebA":
-            # dataset = CelebADataset(transform=dataset_transform, path=image_path)
-            exit(1111)
+            dataset = CelebADataset(transform=dataset_transform, path=image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset, num_workers=1, shuffle=True)

@@ -40,7 +40,8 @@ class SiameseGanSolver(object):
         self.tensorboard = config.tensorboard
 
         if self.tensorboard:
-            self.tb_writer = tensorboardX.SummaryWriter()
+            self.tb_writer = tensorboardX.SummaryWriter(
+                filename_suffix='_%s_%s' % (config.distance_weight, config.dataset))
             self.tb_graph_added = False
 
         self.build_model()
