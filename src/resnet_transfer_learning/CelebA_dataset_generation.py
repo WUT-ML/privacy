@@ -1,3 +1,5 @@
+# coding=utf-8
+"""Utility methods used for splitting the CelebA dataset by attributes for transfer learning."""
 import os
 import numpy as np
 import glob
@@ -11,7 +13,6 @@ def __get_array_of_attributes():
     attr_file.close()
 
     df = []
-    i = 0
     for line in lines[1: -1]:
         line = line.split(" ")
         line = list(filter(None, line))

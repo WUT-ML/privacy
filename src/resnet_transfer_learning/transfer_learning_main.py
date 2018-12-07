@@ -94,8 +94,11 @@ def main():
     """Entry point for transfer learning."""
     percentage_of_validation = 10
     # If dataset is not yet present in the processed images path, it is now generated
-    if not os.path.exists(config.image_processed_path):
-        os.makedirs(config.image_processed_path)
+    # Set data directory
+    data_dir = os.path.join(config.image_processed_path, 'attribute_' + str(
+        config.CelebA_attribute), 'distortion_' + str(config.distance_weight))
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
         CelebA_dataset_generation.split_images_into_train_and_val(
             config.image_source_path, config.image_processed_path, config.CelebA_attribute,
             config.distance_weight, percentage_of_validation)
@@ -114,9 +117,6 @@ def main():
         ]),
     }
 
-    # Set data directory
-    data_dir = os.path.join(config.image_processed_path, 'attribute_' + str(
-        config.CelebA_attribute), 'distortion_' + str(config.distance_weight))
 
     # Data should be split into two subdirs: 'train' and 'val'
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
