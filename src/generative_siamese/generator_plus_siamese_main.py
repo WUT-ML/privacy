@@ -116,9 +116,9 @@ if __name__ == '__main__':
     if config.generate_path == '':
         config.generate_path = os.path.join(
             'results', config.dataset, 'samples', str(config.distance_weight))
-    if config.dataset == 'CelebA' and config.num_epochs is None:
+    if config.dataset == 'CelebA' and (config.num_epochs is None):
         config.num_epochs = 340
-    if config.dataset == 'FERG' and config.num_epochs is None:
+    if config.dataset == 'FERG' and (config.num_epochs is None):
         config.num_epochs = 80
 
     main()
