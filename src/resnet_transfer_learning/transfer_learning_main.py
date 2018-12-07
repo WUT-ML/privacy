@@ -117,7 +117,6 @@ def main():
         ]),
     }
 
-
     # Data should be split into two subdirs: 'train' and 'val'
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                               data_transforms[x])
