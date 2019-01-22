@@ -30,15 +30,20 @@ class Generator(nn.Module):
         self.conv5 = nn.Conv2d(conv_size * 8, conv_size * 8, kernel, stride, pad)
 
         # Unet decoder
-        self.deconv1 = nn.ConvTranspose2d(conv_size * 8, conv_size * 8, kernel, stride, pad)
+        self.deconv1 = nn.ConvTranspose2d(conv_size * 8, conv_size * 8,
+                                          kernel, stride, pad)
         self.deconv1_bn = nn.BatchNorm2d(conv_size * 8)
-        self.deconv2 = nn.ConvTranspose2d(conv_size * 8 * in_channel_multiplier, conv_size * 4, kernel, stride, pad)
+        self.deconv2 = nn.ConvTranspose2d(conv_size * 8 * in_channel_multiplier, conv_size * 4,
+                                          kernel, stride, pad)
         self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
-        self.deconv3 = nn.ConvTranspose2d(conv_size * 4 * in_channel_multiplier, conv_size * 2, kernel, stride, pad)
+        self.deconv3 = nn.ConvTranspose2d(conv_size * 4 * in_channel_multiplier, conv_size * 2,
+                                          kernel, stride, pad)
         self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
-        self.deconv4 = nn.ConvTranspose2d(conv_size * 2 * in_channel_multiplier, conv_size, kernel, stride, pad)
+        self.deconv4 = nn.ConvTranspose2d(conv_size * 2 * in_channel_multiplier, conv_size,
+                                          kernel, stride, pad)
         self.deconv4_bn = nn.BatchNorm2d(conv_size)
-        self.deconv5 = nn.ConvTranspose2d(conv_size * in_channel_multiplier, 3, kernel, stride, pad)
+        self.deconv5 = nn.ConvTranspose2d(conv_size * in_channel_multiplier, 3,
+                                          kernel, stride, pad)
 
     def weight_init(self, mean, std):
         """Initilize weights."""
