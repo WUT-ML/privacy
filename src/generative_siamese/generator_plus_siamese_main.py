@@ -106,6 +106,8 @@ if __name__ == '__main__':
     parser.add_argument('--distance_weight', type=float, default=1.0)
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--batch', type=int, default=128)
+    parser.add_argument('--noise', type=bool, default=True)
+    parser.add_argument('--residual', type=bool, default=True)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=True)
 

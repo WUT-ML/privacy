@@ -33,6 +33,8 @@ class SiameseGanSolver(object):
         self.image_size = config.image_size
         self.num_epochs = config.num_epochs
         self.distance_weight = config.distance_weight
+        self.noise = config.noise
+        self.residual = config.residual
 
         self.data_loader = data_loader
         self.generate_path = config.generate_path
@@ -48,7 +50,7 @@ class SiameseGanSolver(object):
 
     def build_model(self):
         """Build generator and discriminator."""
-        self.generator = Generator(self.g_conv_dim)
+        self.generator = Generator(self.g_conv_dim, noise=self.noise, residual=self.residual)
         self.discriminator = SiameseDiscriminator(self.image_size)
         self.distance_based_loss = DistanceBasedLoss(2.0)
 
