@@ -203,7 +203,7 @@ class SiameseGanSolver(object):
             fake_path = os.path.join(self.generate_path, relative_path[0])
             if not os.path.exists(os.path.dirname(fake_path)):
                 os.makedirs(os.path.dirname(fake_path))
-            torchvision.utils.save_image(denorm(fake_image.data), fake_path, nrow=1)
+            torchvision.utils.save_image(fake_image.data, fake_path, nrow=1)
 
     def check_discriminator_accuracy(self):
         """Measure discriminator's accuracy."""
