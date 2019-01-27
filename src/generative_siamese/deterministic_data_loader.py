@@ -12,16 +12,20 @@ from torch.utils.data import Dataset
 class TripletCelebA(Dataset):
     """Quasi-deterministic triplet data loader class for CelebA dataset."""
 
-    def __init__(self, path, transform):
+    def __init__(self, path, transform, is_evaluation=False):
         """Construct data loader."""
         self.dataset_path = os.path.join(path, "CelebA_unzipped", "img_align_celeba")
         self.transform = transform
-        self.random = np.random.RandomState(seed=20180725)
+        if is_evaluation:
+            self.random = np.random.RandomState(seed=20180725)
+            random.seed(70049)
+        else:
+            self.random = np.random.RandomState(seed=51729261)
+            random.seed(12345)
         self.SIZE = 10000
         self.N_IDS = 10177
         self.filenames = pd.read_csv(
             os.path.join(path, "ids.txt"), header=None, sep=' ')
-        random.seed(70049)
 
     def __len__(self):
         """Return length of dataset."""
@@ -29,9 +33,9 @@ class TripletCelebA(Dataset):
 
     def get_img(self, id):
         """Get image of a given person."""
-        assert id >= 0 or id < self.N_IDS
+        assert 0 <= id < self.N_IDS
 
-        # Index is 1-based
+        # identity index is 1-based
         id += 1
 
         # Get a random image of a person
@@ -76,16 +80,20 @@ class TripletFERG(Dataset):
     Label 0 if images come from the same person, 1 otherwise.
     """
 
-    def __init__(self, path, transform):
+    def __init__(self, path, transform, is_evaluation=False):
         """Construct data loader."""
         self.transform = transform
-        self.random = np.random.RandomState(seed=20180124)
+        if is_evaluation:
+            self.random = np.random.RandomState(seed=20180124)
+            random.seed(52092)
+        else:
+            self.random = np.random.RandomState(seed=51729261)
+            random.seed(12345)
         self.SIZE = 10000
         self.N_IDS = 6
         self.filenames = pd.read_csv(os.path.join(path, "images.csv"), header=None)
         self.range_dict = {0: (0, 7557), 1: (7558, 17560), 2: (17561, 25139),
                            3: (25140, 36409), 4: (36410, 45010), 5: (45011, 55765)}
-        random.seed(52092)
 
     def __len__(self):
         """Return length of dataset."""
@@ -98,7 +106,7 @@ class TripletFERG(Dataset):
 
     def get_img(self, id):
         """Get image of a given person."""
-        assert id >= 0 or id < self.N_IDS
+        assert 0 <= id < self.N_IDS
 
         # Get a random image of a person
         index = self.get_random_index(id)
@@ -146,14 +154,54 @@ class FERGDataset(Dataset):
         return self.N_IMAGES
 
     def get_img(self, index):
-        """Get image of a given person."""
-        assert index >= 0 or index < self.N_IMAGES
+        """Get image of a given index."""
+        assert 0 <= index < self.N_IMAGES
 
         img_path = self.filenames.iloc[index, 0]
         img = scipy.misc.imread(img_path, mode="RGBA")[0]
         img[img[:, :, 3] == 0] = 255
 
         return img[:, :, 0:3], img_path
+
+    def __getitem__(self, index):
+        """Access item from dataset."""
+        if index < self.N_IMAGES:
+            img_1, img_path = self.get_img(index)
+
+        if self.transform:
+            img_1 = self.transform(img_1)
+
+        return img_path, img_1
+
+
+class CelebADataset(Dataset):
+    """Quasi-deterministic data loader class for CelebA dataset."""
+
+    def __init__(self, path, transform):
+        """Construct data loader."""
+        self.transform = transform
+        self.path = path
+        self.random = np.random.RandomState(seed=20180419)
+        self.filenames = pd.read_csv(
+            os.path.join(path, "ids.txt"), header=None, sep=' ')
+        self.N_IMAGES = self.filenames.shape[0]
+        random.seed(20180703)
+
+    def __len__(self):
+        """Return length of dataset."""
+        return self.N_IMAGES
+
+    def get_img(self, index):
+        """Get image of a given index."""
+        assert 0 <= index < self.N_IMAGES
+
+        # Get a random image of a person
+        img_path = os.path.join(
+            self.path, "CelebA_unzipped", "img_align_celeba", self.filenames.iloc[index, 0])
+        img = scipy.misc.imread(img_path, mode="RGBA")
+        img[img[:, :, 3] == 0] = 255
+
+        return img[:, :, 0:3], self.filenames.iloc[index, 0]
 
     def __getitem__(self, index):
         """Access item from dataset."""

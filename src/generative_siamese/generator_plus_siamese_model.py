@@ -4,14 +4,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from torch.autograd import Variable
 
 
 class Generator(nn.Module):
     """Generator (forger) neural network."""
 
-    def __init__(self, conv_size, kernel=4, stride=2, pad=1):
+    def __init__(self, conv_size, kernel=4, stride=2, pad=1, noise=False, residual=False):
         """Initialize generator."""
         super(Generator, self).__init__()
+        self.noise = noise
+        self.residual = residual
+        in_channel_multiplier = 1
+        if residual:
+            in_channel_multiplier = 2
 
         # Unet encoder
         self.conv1 = nn.Conv2d(3, conv_size, kernel, stride, pad)
@@ -24,15 +30,20 @@ class Generator(nn.Module):
         self.conv5 = nn.Conv2d(conv_size * 8, conv_size * 8, kernel, stride, pad)
 
         # Unet decoder
-        self.deconv1 = nn.ConvTranspose2d(conv_size * 8, conv_size * 8, kernel, stride, pad)
+        self.deconv1 = nn.ConvTranspose2d(conv_size * 8, conv_size * 8,
+                                          kernel, stride, pad)
         self.deconv1_bn = nn.BatchNorm2d(conv_size * 8)
-        self.deconv2 = nn.ConvTranspose2d(conv_size * 8, conv_size * 4, kernel, stride, pad)
+        self.deconv2 = nn.ConvTranspose2d(conv_size * 8 * in_channel_multiplier, conv_size * 4,
+                                          kernel, stride, pad)
         self.deconv2_bn = nn.BatchNorm2d(conv_size * 4)
-        self.deconv3 = nn.ConvTranspose2d(conv_size * 4, conv_size * 2, kernel, stride, pad)
+        self.deconv3 = nn.ConvTranspose2d(conv_size * 4 * in_channel_multiplier, conv_size * 2,
+                                          kernel, stride, pad)
         self.deconv3_bn = nn.BatchNorm2d(conv_size * 2)
-        self.deconv4 = nn.ConvTranspose2d(conv_size * 2, conv_size, kernel, stride, pad)
+        self.deconv4 = nn.ConvTranspose2d(conv_size * 2 * in_channel_multiplier, conv_size,
+                                          kernel, stride, pad)
         self.deconv4_bn = nn.BatchNorm2d(conv_size)
-        self.deconv5 = nn.ConvTranspose2d(conv_size, 3, kernel, stride, pad)
+        self.deconv5 = nn.ConvTranspose2d(conv_size * in_channel_multiplier, 3,
+                                          kernel, stride, pad)
 
     def weight_init(self, mean, std):
         """Initilize weights."""
@@ -47,10 +58,21 @@ class Generator(nn.Module):
         c4 = self.conv4_bn(self.conv4(F.leaky_relu(c3, 0.1)))
         c5 = self.conv5(F.leaky_relu(c4, 0.1))
 
+        if self.noise:
+            c5 += Variable((0.01 * (torch.randn(c5.size()))).cuda())
+
         d1 = F.dropout(self.deconv1_bn(self.deconv1(F.leaky_relu(c5, 0.1))), 0.5, training=True)
+        if self.residual:
+            d1 = torch.cat([d1, c4], 1)
         d2 = F.dropout(self.deconv2_bn(self.deconv2(F.leaky_relu(d1, 0.1))), 0.5, training=True)
+        if self.residual:
+            d2 = torch.cat([d2, c3], 1)
         d3 = F.dropout(self.deconv3_bn(self.deconv3(F.leaky_relu(d2, 0.1))), 0.5, training=True)
+        if self.residual:
+            d3 = torch.cat([d3, c2], 1)
         d4 = self.deconv4_bn(self.deconv4(F.leaky_relu(d3, 0.1)))
+        if self.residual:
+            d4 = torch.cat([d4, c1], 1)
         d5 = self.deconv5(F.leaky_relu(d4, 0.1))
         out = F.tanh(d5)
 

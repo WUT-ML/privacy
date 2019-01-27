@@ -18,6 +18,7 @@ from torchvision import datasets, models, transforms
 import time
 import os
 import argparse
+import CelebA_dataset_generation
 
 
 def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs):
@@ -91,6 +92,17 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
 
 def main():
     """Entry point for transfer learning."""
+    percentage_of_validation = 10
+    # If dataset is not yet present in the processed images path, it is now generated
+    # Set data directory
+    data_dir = os.path.join(config.image_processed_path, 'attribute_' + str(
+        config.CelebA_attribute), 'distortion_' + str(config.distance_weight))
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+        CelebA_dataset_generation.split_images_into_train_and_val(
+            config.image_source_path, config.image_processed_path, config.CelebA_attribute,
+            config.distance_weight, percentage_of_validation)
+
     # Transform data to get input consistent with ResNet model
     data_transforms = {
         'train': transforms.Compose([
@@ -104,9 +116,6 @@ def main():
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
     }
-
-    # Set data directory
-    data_dir = config.image_path
 
     # Data should be split into two subdirs: 'train' and 'val'
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
@@ -140,8 +149,27 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path', type=str, default='data')
-    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--dataset', type=str, default='CelebA')
+    parser.add_argument('--image_source_path', type=str)
+    parser.add_argument('--image_processed_path', type=str)
+    parser.add_argument('--CelebA_attribute', type=int, default=5)
+    parser.add_argument('--num_epochs', type=int, default=20)
+    parser.add_argument('--distance_weight', type=float)
 
     config = parser.parse_args()
+    if config.dataset == 'CelebA' and (config.image_source_path is None):
+        if config.distance_weight is None:
+            config.image_source_path = os.path.join('data', 'CelebA')
+            config.distance_weight = 0
+        else:
+            weight = str(config.distance_weight)
+            config.image_source_path = os.path.join('results', 'CelebA', 'samples', weight)
+    if config.dataset == 'CelebA' and (config.image_processed_path is None):
+        config.image_processed_path = os.path.join('data', 'CelebA_for_utility')
+        if not os.path.exists(config.image_processed_path):
+            os.makedirs(config.image_processed_path)
+    if config.dataset == 'FERG' and (config.num_epochs is None):
+        print('FERG is not supported yet')
+        exit(11)
+
     main()

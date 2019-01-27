@@ -33,6 +33,8 @@ class SiameseGanSolver(object):
         self.image_size = config.image_size
         self.num_epochs = config.num_epochs
         self.distance_weight = config.distance_weight
+        self.noise = config.noise
+        self.residual = config.residual
 
         self.data_loader = data_loader
         self.generate_path = config.generate_path
@@ -40,14 +42,15 @@ class SiameseGanSolver(object):
         self.tensorboard = config.tensorboard
 
         if self.tensorboard:
-            self.tb_writer = tensorboardX.SummaryWriter()
+            self.tb_writer = tensorboardX.SummaryWriter(
+                filename_suffix='_%s_%s' % (config.distance_weight, config.dataset))
             self.tb_graph_added = False
 
         self.build_model()
 
     def build_model(self):
         """Build generator and discriminator."""
-        self.generator = Generator(self.g_conv_dim)
+        self.generator = Generator(self.g_conv_dim, noise=self.noise, residual=self.residual)
         self.discriminator = SiameseDiscriminator(self.image_size)
         self.distance_based_loss = DistanceBasedLoss(2.0)
 
@@ -201,6 +204,38 @@ class SiameseGanSolver(object):
             if not os.path.exists(os.path.dirname(fake_path)):
                 os.makedirs(os.path.dirname(fake_path))
             torchvision.utils.save_image(denorm(fake_image.data), fake_path, nrow=1)
+
+    def check_discriminator_accuracy(self):
+        """Measure discriminator's accuracy."""
+        # Measure accuracy of identity verification by discriminator
+        correct_pairs = 0
+        total_pairs = 0
+
+        g_path = os.path.join(self.model_path, 'generator-%d.pkl' % self.num_epochs)
+        self.generator.load_state_dict(torch.load(g_path))
+        self.generator.eval()
+
+        d_path = os.path.join(self.model_path, 'discriminator-%d.pkl' % self.num_epochs)
+        self.discriminator.load_state_dict(torch.load(d_path))
+        self.discriminator.eval()
+
+        for label, images0, images1 in self.data_loader:
+            images0 = to_variable(images0)
+            images1 = to_variable(images1)
+            label = to_variable(label)
+
+            # Predict label = 1 if outputs are dissimilar (distance > margin)
+            privatized_images0 = self.generator(images0)
+            output0, output1 = self.discriminator(privatized_images0, images1)
+            predictions = self.distance_based_loss.predict(output0, output1)
+            predictions = predictions.type(label.data.type())
+
+            correct_pairs += (predictions == label).sum().data[0]
+            total_pairs += len(predictions)
+
+        accuracy = correct_pairs / total_pairs
+        print('distance weight = %f' % self.distance_weight)
+        print('accuracy = %f' % accuracy)
 
 
 def denorm(image):

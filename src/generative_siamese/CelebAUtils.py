@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Utility methods used for loading the CelebA dataset."""
+"""Utility methods used for loading and evaluating the CelebA dataset."""
 import os
 from zipfile import ZipFile
 import gdown
@@ -17,6 +17,15 @@ def download_dataset(path):
     gdown.download(
         "https://drive.google.com/uc?id=0B7EVK8r0v71pblRyaVFSWGxPY0U",
         os.path.join(path, 'attr.txt'), True)
+
+    f = open(os.path.join(path, 'attr.txt'), "r")
+    lines = f.readlines()
+    f.close()
+    f = open(os.path.join(path, 'attr.txt'), "w")
+    for line in lines[1:]:
+        f.write(line)
+    f.close()
+
     print("done")
 
 

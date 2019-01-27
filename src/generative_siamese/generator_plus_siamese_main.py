@@ -8,7 +8,7 @@ import torch
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from deterministic_data_loader import TripletFERG, FERGDataset, TripletCelebA
+from deterministic_data_loader import TripletFERG, FERGDataset, TripletCelebA, CelebADataset
 from generator_plus_siamese_solver import SiameseGanSolver
 import FERGUtils
 import CelebAUtils
@@ -27,8 +27,8 @@ def main():
         transforms.ToTensor(),
     ])
 
-    print("If an error occurred while downloading or unzipping the dataset,"
-          "you might have to remove the directory with faulty files: data/{dataset}")
+    # If an error occurred while downloading or unzipping the dataset,
+    # you might have to remove the directory with faulty files: data/{dataset}
 
     image_path = os.path.join("data", config.dataset)
     # Create directories if not exist
@@ -68,8 +68,7 @@ def main():
         if config.dataset == "FERG":
             dataset = FERGDataset(transform=dataset_transform, path=image_path)
         elif config.dataset == "CelebA":
-            # dataset = CelebADataset(transform=dataset_transform, path=image_path)
-            exit(1111)
+            dataset = CelebADataset(transform=dataset_transform, path=image_path)
 
         # Prepare data loader for dataset
         data_loader = DataLoader(dataset=dataset, num_workers=1, shuffle=True)
@@ -77,6 +76,23 @@ def main():
         # Generate images
         solver = SiameseGanSolver(config, data_loader)
         solver.generate()
+
+    elif config.mode == 'evaluate_privacy':
+
+        if config.dataset == "FERG":
+            dataset = TripletFERG(
+                transform=dataset_transform, path=image_path, is_evaluation=True)
+        elif config.dataset == "CelebA":
+            dataset = TripletCelebA(
+                transform=dataset_transform, path=image_path, is_evaluation=True)
+
+        # Prepare data loader for dataset
+        data_loader = DataLoader(dataset=dataset, batch_size=config.batch, num_workers=config.jobs,
+                                 shuffle=True)
+
+        # Generate images
+        solver = SiameseGanSolver(config, data_loader)
+        solver.check_discriminator_accuracy()
 
 
 if __name__ == '__main__':
@@ -86,10 +102,12 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default='')
     parser.add_argument('--generate_path', type=str, default='')
     parser.add_argument('--dataset', type=str, default='CelebA')
-    parser.add_argument('--num_epochs', type=int, default=80)
+    parser.add_argument('--num_epochs', type=int)
     parser.add_argument('--distance_weight', type=float, default=1.0)
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--batch', type=int, default=128)
+    parser.add_argument('--noise', type=bool, default=True)
+    parser.add_argument('--residual', type=bool, default=True)
     parser.add_argument('--tensorboard', dest='tensorboard', action='store_true')
     parser.set_defaults(tensorboard=True)
 
@@ -100,7 +118,9 @@ if __name__ == '__main__':
     if config.generate_path == '':
         config.generate_path = os.path.join(
             'results', config.dataset, 'samples', str(config.distance_weight))
-    if config.dataset == 'CelebA' and config.num_epochs == 80:
+    if config.dataset == 'CelebA' and (config.num_epochs is None):
         config.num_epochs = 340
+    if config.dataset == 'FERG' and (config.num_epochs is None):
+        config.num_epochs = 80
 
     main()
