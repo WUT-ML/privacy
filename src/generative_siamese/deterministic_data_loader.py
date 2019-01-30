@@ -158,8 +158,11 @@ class FERGDataset(Dataset):
         assert 0 <= index < self.N_IMAGES
 
         img_path = self.filenames.iloc[index, 0]
-        img = scipy.misc.imread(img_path, mode="RGBA")[0]
+        img = scipy.misc.imread(img_path, mode="RGBA")
         img[img[:, :, 3] == 0] = 255
+        second_separator_index = img_path.rfind(os.path.sep, 0, img_path.rfind(os.path.sep))
+        third_separator_index = img_path.rfind(os.path.sep, 0, second_separator_index)
+        img_path = img_path[third_separator_index + 1:]
 
         return img[:, :, 0:3], img_path
 
