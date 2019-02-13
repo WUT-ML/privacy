@@ -4,6 +4,7 @@ import os
 import numpy as np
 import glob
 from shutil import copyfile
+from PIL import Image
 
 
 def __get_array_of_attributes():
@@ -55,6 +56,20 @@ def split_images_into_train_and_val(path_source, path_destination, attribute,
     paths_with_attribute = [filenames_with_paths[i] for i in indices_of_paths_with_attribute]
     paths_without_attribute = [filenames_with_paths[i] for i in indices_of_paths_without_attribute]
 
+    if len(paths_with_attribute) < 3.0 / 7 * len(paths_without_attribute):
+        print("Less than 30% of the dataset has the attribute set to true. "
+              "Balancing dataset by reducing the number of images without the attribute to " +
+              str(int(3.0 / 7 * len(paths_without_attribute))))
+        paths_without_attribute = paths_without_attribute[
+                                  :int(7.0 / 3 * len(paths_with_attribute))]
+
+    if len(paths_without_attribute) < 3.0 / 7 * len(paths_with_attribute):
+        print("Less than 30% of the dataset has the attribute set to false. "
+              "Balancing dataset by reducing the number of images with the attribute to " +
+              str(int(3.0 / 7 * len(paths_with_attribute))))
+        paths_with_attribute = paths_with_attribute[
+                                  :int(7.0 / 3 * len(paths_without_attribute))]
+
     number_of_val_images_with_attribute = round(validation_percentage / 100 *
                                                 len(paths_with_attribute))
     number_of_val_images_without_attribute = round(validation_percentage / 100 *
@@ -84,3 +99,7 @@ def split_images_into_train_and_val(path_source, path_destination, attribute,
                     os.makedirs(dst_dir)
                 dst_path = os.path.join(dst_dir, path_to_image[path_to_image.rfind(os.sep) + 1:])
                 copyfile(path_to_image, dst_path)
+                if train_or_val == 'val':
+                    im = Image.open(dst_path)
+                    im.resize((224, 224))
+                    im.save(dst_path)
